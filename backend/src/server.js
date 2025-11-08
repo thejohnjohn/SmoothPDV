@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import db from './config/db.js';
 import saleRoutes from './routes/saleRoutes.js';
 import productRoutes from './routes/productRoutes.js';
@@ -9,6 +10,7 @@ const app = express();
 const PORT = 3000;
 
 // Middlewares básicos
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
@@ -31,6 +33,24 @@ app.get('/health', async (req, res) => {
   } catch (error) {
     res.status(500).json({ status: 'ERROR', database: 'Disconnected' });
   }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err.stack);
+  res.status(500).json({
+    error: 'Algo deu errado!',
+    message: err.message
+  });
+});
+
+// 404 Handling Expree
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not found',
+    path: req.path,
+    method: req.method
+  });
 });
 
 // Start server
