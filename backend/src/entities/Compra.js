@@ -25,7 +25,7 @@ export class Compra {
   }
 
   static async create(db, saleData) {
-    const [id] = await db('compra').insert(saleData).returning('id');
+    const [{ id }] = await db('compra').insert(saleData).returning('id');
     return await Compra.findById(db, id);
   }
 }

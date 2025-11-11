@@ -1,11 +1,11 @@
 -- 1. Inserir usuários (já existente)
 INSERT INTO "usuario" ("nome", "email", "senha", "tipo") VALUES 
-('João Silva', 'joao.silva@email.com', 'senha123', 'ADMIN'),
-('Maria Santos', 'maria.santos@email.com', 'senha456', 'GERENTE'),
-('Pedro Oliveira', 'pedro.oliveira@email.com', 'senha789', 'VENDEDOR'),
-('Ana Costa', 'ana.costa@email.com', 'senha101', 'CLIENTE'),
-('Carlos Lima', 'carlos.lima@email.com', 'senha202', 'CLIENTE'),
-('Fernanda Rocha', 'fernanda.rocha@email.com', 'senha303', 'CLIENTE');
+('João Silva', 'joao.silva@email.com', '$2a$10$6U7nUvt9MPUhXem7VKH7ReODxMVEExk/PzhBjJ0sMALOQP6JujZme', 'ADMIN'),
+('Maria Santos', 'maria.santos@email.com', '$2a$10$PifpF0sHLXPMcBRXgyd3ROAViry1KB11t1bJlVeHRQdd3RqmPvnuu', 'GERENTE'),
+('Pedro Oliveira', 'pedro.oliveira@email.com', '$2a$10$/VzZhtC0Et2N7wtXiWHDCOJGt/5uTaSb0y2/2fjf6i7OVzpizRMtW', 'VENDEDOR'),
+('Ana Costa', 'ana.costa@email.com', '$2a$10$VTUTWK452OvEP0T7qYdyEew9A.7rhxSkCgkTPPZAFn/4lGGiMG9b.', 'CLIENTE'),
+('Carlos Lima', 'carlos.lima@email.com', '$2a$10$VHrqvLADIipImn4/eSJb6Oio2ygEHuuUeZBbNC/w1rR8arurbc372', 'CLIENTE'),
+('Fernanda Rocha', 'fernanda.rocha@email.com', '$2a$10$VG7GwnrINAOyydr3GhKJsOJDh101fIe9CwpGTQI0BaDxk17f3rm9i', 'CLIENTE');
 
 -- 2. Inserir mercadorias (cadastradas por usuários)
 INSERT INTO "mercadoria" ("id", "descricao", "preco", "id_usuario") VALUES 
