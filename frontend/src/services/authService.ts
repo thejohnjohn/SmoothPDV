@@ -1,4 +1,4 @@
-import { User, LoginData } from '../types/auth';
+import type { User, LoginData } from '../types/auth';
 import { api } from './api';
 
 export const authService = {

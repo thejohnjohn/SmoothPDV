@@ -13,7 +13,6 @@ export const Header: React.FC = () => {
         
         <div className="header-actions">
           <span className="user-info">Olá, {user?.nome}</span>
-          <span className="user-role">({user?.tipo})</span>
           <button onClick={logout} className="btn-logout">
             Sair
           </button>

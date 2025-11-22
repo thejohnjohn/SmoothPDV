@@ -3,6 +3,10 @@ export class Pagamento {
     this.id = data.id;
     this.data = data.data;
     this.valor = data.valor;
+    this.metodo_pagamento = data.metodo_pagamento || 'DINHEIRO';
+    this.status = data.status || 'APROVADO';
+    this.troco = data.troco || 0;
+    this.observacao = data.observacao;
     this.idcompra = data.idcompra;
   }
 
@@ -12,6 +16,35 @@ export class Pagamento {
   }
 
   static async create(db, paymentData) {
-    await db('pagamento').insert(paymentData);
+    const [{ id }] = await db('pagamento').insert(paymentData).returning('id');
+    return id;
+  }
+
+  // Validar método de pagamento
+  static isValidPaymentMethod(method) {
+    const validMethods = ['DINHEIRO', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'PIX', 'BOLETO'];
+    return validMethods.includes(method.toUpperCase());
+  }
+
+  // Calcular troco
+  static calculateChange(amountPaid, total) {
+    return Math.max(0, amountPaid - total);
   }
 }
+
+// Métodos de pagamento disponíveis
+export const MetodoPagamento = {
+  DINHEIRO: 'DINHEIRO',
+  CARTAO_CREDITO: 'CARTAO_CREDITO', 
+  CARTAO_DEBITO: 'CARTAO_DEBITO',
+  PIX: 'PIX',
+  BOLETO: 'BOLETO'
+};
+
+// Status de pagamento
+export const StatusPagamento = {
+  APROVADO: 'APROVADO',
+  PENDENTE: 'PENDENTE',
+  RECUSADO: 'RECUSADO',
+  ESTORNADO: 'ESTORNADO'
+};

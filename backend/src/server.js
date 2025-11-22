@@ -12,7 +12,7 @@ import customerRoutes from './routes/customerRoutes.js';
 
 const app = express();
 const PORT = 3000;
-const HOST = '192.168.0.102';
+const HOST = '192.168.0.105';
 
 // Middlewares
 app.use(helmet());
@@ -27,10 +27,10 @@ app.use((req, res, next) => {
 
 // Rotas
 app.use('/api/auth', authRoutes);
-app.use('/api', userRoutes);
 app.use('/api', saleRoutes);
 app.use('/api', productRoutes);
 app.use('/api', customerRoutes);
+app.use('/api', userRoutes);
 
 // Health Check
 app.get('/health', async (req, res) => {

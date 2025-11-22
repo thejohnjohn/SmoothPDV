@@ -71,3 +71,10 @@ ALTER TABLE "compra"
   ADD CONSTRAINT "fk_compra_cliente" 
   FOREIGN KEY ("id_cliente") REFERENCES "usuario" ("id") 
   ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Adicionar colunas de pagamento
+ALTER TABLE pagamento 
+ADD COLUMN metodo_pagamento VARCHAR(50) NOT NULL DEFAULT 'DINHEIRO',
+ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'APROVADO',
+ADD COLUMN troco DECIMAL(10,2) DEFAULT 0,
+ADD COLUMN observacao TEXT;

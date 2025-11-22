@@ -4,7 +4,30 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>SmoothPDV</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Configuração customizada -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                50: '#f0f9ff',
+                100: '#e0f2fe', 
+                500: '#0ea5e9',
+                600: '#0284c7',
+                700: '#0369a1',
+              },
+              success: '#10b981',
+              warning: '#f59e0b',
+              error: '#ef4444',
+            }
+          }
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -39,39 +39,56 @@ export const saleController = {
     try {
       const { data, id_cliente, itens, pagamento } = req.body;
 
+      // Validar método de pagamento
+      if (!Pagamento.isValidPaymentMethod(pagamento.metodo_pagamento)) {
+        return res.status(400).json({ 
+          error: 'Método de pagamento inválido',
+          metodos_validos: Object.values(MetodoPagamento)
+        });
+      }
+
+      // Calcular troco se for dinheiro
+      let troco = 0;
+      if (pagamento.metodo_pagamento === 'DINHEIRO' && pagamento.valor_pago) {
+        troco = Pagamento.calculateChange(pagamento.valor_pago, pagamento.valor);
+      }
+
       // Criar compra
-      const saleData = {
+      const compra = await Compra.create(trx, {
         data: new Date(data),
         id_cliente
-      };
-      
-      const sale = await Compra.create(trx, saleData);
+      });
 
       // Adicionar itens
       if (itens && itens.length > 0) {
         const itemsToInsert = itens.map(item => ({
           quantidade: item.quantidade,
           idmercadoria: item.idmercadoria,
-          idcompra: sale.id
+          idcompra: compra.id
         }));
         
         await ItemMercadoria.createMultiple(trx, itemsToInsert);
       }
 
       // Adicionar pagamento
-      if (pagamento) {
-        await Pagamento.create(trx, {
-          data: new Date(pagamento.data),
-          valor: pagamento.valor,
-          idcompra: sale.id
-        });
-      }
+      const paymentData = {
+        data: new Date(pagamento.data),
+        valor: pagamento.valor,
+        metodo_pagamento: pagamento.metodo_pagamento,
+        status: pagamento.status || 'APROVADO',
+        troco: troco,
+        observacao: pagamento.observacao,
+        idcompra: compra.id
+      };
+
+      await Pagamento.create(trx, paymentData);
 
       await trx.commit();
       
-      const completeSale = await Compra.findById(req.db, sale.id);
-      const items = await ItemMercadoria.findBySaleId(req.db, sale.id);
-      const payments = await Pagamento.findBySaleId(req.db, sale.id);
+      // Buscar venda completa para retornar
+      const completeSale = await Compra.findById(req.db, compra.id);
+      const items = await ItemMercadoria.findBySaleId(req.db, compra.id);
+      const payments = await Pagamento.findBySaleId(req.db, compra.id);
 
       res.status(201).json({
         ...completeSale,
@@ -81,6 +98,7 @@ export const saleController = {
       
     } catch (error) {
       await trx.rollback();
+      console.error('Erro ao criar venda:', error);
       res.status(500).json({ error: error.message });
     }
   }

@@ -8,6 +8,7 @@ import { Login } from '../pages/Login/Login';
 import { Dashboard } from '../pages/Dashboard/Dashboard';
 import { Products } from '../pages/Products/Products';
 import { Sales } from '../pages/Sales/Sales';
+import { PDV } from '../pages/PDV/PDV';
 // import { Customers } from '../pages/Customers/Customers';
 // import { Reports } from '../pages/Reports/Reports';
 
@@ -33,6 +34,7 @@ export const AppRouter: React.FC = () => {
       >
         <Route index element={<Navigate to="/dashboard" />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="pdv" element={<PDV />} />
         <Route path="products" element={<Products />} />
         <Route path="sales" element={<Sales />} />
         {/* <Route path="customers" element={<Customers />} />

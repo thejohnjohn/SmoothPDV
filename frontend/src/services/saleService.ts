@@ -1,18 +1,5 @@
-import { Sale } from '../types/sales';
+import type { Sale, CreateSaleData } from '../types/sales';
 import { api } from './api';
-
-export interface CreateSaleData {
-  data: string;
-  id_cliente: number;
-  itens: Array<{
-    quantidade: number;
-    idmercadoria: number;
-  }>;
-  pagamento: {
-    data: string;
-    valor: number;
-  };
-}
 
 export const saleService = {
   async getAll(): Promise<Sale[]> {
@@ -26,7 +13,17 @@ export const saleService = {
   },
 
   async create(data: CreateSaleData): Promise<Sale> {
-    const response = await api.post('/sales', data);
+    // Garantir que o pagamento tenha método
+    const saleData = {
+      ...data,
+      pagamento: {
+        ...data.pagamento,
+        metodo_pagamento: data.pagamento.metodo_pagamento || 'DINHEIRO',
+        status: data.pagamento.status || 'APROVADO'
+      }
+    };
+
+    const response = await api.post('/sales', saleData);
     return response.data;
   }
 };
