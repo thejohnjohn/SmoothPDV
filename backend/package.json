@@ -5,24 +5,27 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev:debug": "nodemon --inspect src/server.js",
-    "dev": "nodemon src/server.js",
+    "dev:debug": "node --inspect --watch --env-file=../.env src/server.js",
+    "dev": "node src/server.js",
     "start": "node src/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "express-async-errors": "^3.1.1",
     "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
+    "nodemailer": "^7.0.10",
+    "pdfkit": "^0.17.2",
     "pg": "^8.16.3",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2"
+    "resend": "^6.5.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1" 
+    "nodemon": "^3.0.1"
   }
 }

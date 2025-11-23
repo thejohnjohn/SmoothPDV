@@ -7,12 +7,42 @@ export const Sidebar: React.FC = () => {
   const { user } = useAuth();
 
   const menuItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['ADMIN', 'GERENTE'] },
-    { path: '/pdv', label: 'PDV', icon: '🛒', roles: ['ADMIN', 'GERENTE', 'VENDEDOR'] },
-    { path: '/sales', label: 'Vendas', icon: '💰', roles: ['ADMIN', 'GERENTE'] },
-    { path: '/products', label: 'Produtos', icon: '📦', roles: ['ADMIN', 'GERENTE', 'VENDEDOR' ] },
-    { path: '/customers', label: 'Clientes', icon: '👥', roles: ['ADMIN', 'GERENTE'] },
-    { path: '/reports', label: 'Relatórios', icon: '📋', roles: ['ADMIN', 'GERENTE'] },
+    { 
+      path: '/dashboard', 
+      label: 'Dashboard', 
+      icon: '📊', 
+      roles: ['ADMIN', 'GERENTE', 'VENDEDOR', 'CLIENTE'] 
+    },
+    { 
+      path: '/pdv', 
+      label: 'PDV', 
+      icon: '🛒', 
+      roles: ['ADMIN', 'GERENTE', 'VENDEDOR'] 
+    },
+    { 
+      path: '/sales', 
+      label: 'Vendas', 
+      icon: '💰', 
+      roles: ['ADMIN', 'GERENTE', 'VENDEDOR', 'CLIENTE'] 
+    },
+    { 
+      path: '/products', 
+      label: 'Produtos', 
+      icon: '📦', 
+      roles: ['ADMIN', 'GERENTE', 'VENDEDOR', 'CLIENTE'] 
+    },
+    { 
+      path: '/customers', 
+      label: 'Clientes', 
+      icon: '👥', 
+      roles: ['ADMIN', 'GERENTE'] 
+    },
+    { 
+      path: '/reports', 
+      label: 'Relatórios', 
+      icon: '📋', 
+      roles: ['ADMIN', 'GERENTE'] 
+    },
   ];
 
   const filteredMenuItems = menuItems.filter(item => 

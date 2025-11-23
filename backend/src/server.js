@@ -9,10 +9,12 @@ import userRoutes from './routes/userRoutes.js';
 import saleRoutes from './routes/saleRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
 
 const app = express();
 const PORT = 3000;
-const HOST = '192.168.0.105';
+const HOST = '192.168.0.116';
 
 // Middlewares
 app.use(helmet());
@@ -30,6 +32,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api', saleRoutes);
 app.use('/api', productRoutes);
 app.use('/api', customerRoutes);
+app.use('/api', dashboardRoutes);
+app.use('/api', reportRoutes);
 app.use('/api', userRoutes);
 
 // Health Check
