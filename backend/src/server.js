@@ -13,8 +13,9 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 
 const app = express();
-const PORT = 3000;
-const HOST = '192.168.0.116';
+
+const PORT = process.env.API_PORT;
+const HOST = process.env.API_HOST;
 
 // Middlewares
 app.use(helmet());

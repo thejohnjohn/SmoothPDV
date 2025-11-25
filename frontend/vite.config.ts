@@ -1,10 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import dotenv from 'dotenv'
+import path from 'path'
 
-// https://vite.dev/config/
+dotenv.config({ path: path.resolve(__dirname, '../.env') })
+
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: '192.168.0.116'
+    host: process.env.VITE_HOST || 'localhost'
   }
 })
