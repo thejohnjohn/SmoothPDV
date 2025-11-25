@@ -16,7 +16,7 @@ export const PDV: React.FC = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false); // ← NOVO STATE
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -39,12 +39,10 @@ export const PDV: React.FC = () => {
     }
   };
 
-  // Filtra produtos apenas pela busca
   const filteredProducts = products.filter(product => 
     product.descricao.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Funções do carrinho
   const addToCart = (product: Product) => {
     setCart(prev => {
       const existing = prev.find(item => item.product.id === product.id);
@@ -112,11 +110,9 @@ export const PDV: React.FC = () => {
 
       await saleService.create(saleData);
       
-      // Limpar carrinho após venda
       setCart([]);
       setShowPaymentModal(false);
       
-      // Mensagem de sucesso personalizada
       const methodName = getPaymentMethodName(paymentData.metodo_pagamento);
       const changeMessage = paymentData.troco > 0 
         ? ` Troco: R$ ${paymentData.troco.toFixed(2)}` 
@@ -153,8 +149,8 @@ export const PDV: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando produtos...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-black-light">Carregando produtos...</p>
         </div>
       </div>
     );
@@ -165,11 +161,11 @@ export const PDV: React.FC = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="text-error text-4xl mb-4">⚠️</div>
-          <p className="text-gray-700 mb-2">{error}</p>
-          <p className="text-gray-500 text-sm mb-4">Backend: http://localhost:3000</p>
+          <p className="text-black-medium mb-2">{error}</p>
+          <p className="text-black-light text-sm mb-4">Backend: http://localhost:3000</p>
           <button 
             onClick={loadProducts}
-            className="btn-primary"
+            className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg font-nunito font-bold transition-colors"
           >
             🔄 Tentar Novamente
           </button>
@@ -179,22 +175,22 @@ export const PDV: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen bg-white-light flex flex-col font-nunito">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white border-b border-black-light px-6 py-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">🛒 PDV - Ponto de Venda</h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <h1 className="text-3xl font-bold text-black">🛒 PDV - Ponto de Venda</h1>
+            <p className="text-base text-black-medium mt-1">
               {products.length} produtos disponíveis
             </p>
           </div>
           <div className="text-right">
-            <div className="text-sm text-gray-600">
-              Vendedor: <span className="font-medium">{user?.nome}</span>
+            <div className="text-base text-black-medium">
+              Vendedor: <span className="font-bold">{user?.nome}</span>
             </div>
             {user?.tipo && (
-              <span className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
+              <span className="bg-primary-light text-primary px-3 py-1 rounded-full text-sm font-bold">
                 {user.tipo}
               </span>
             )}
@@ -204,7 +200,7 @@ export const PDV: React.FC = () => {
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 p-6">
         {/* Coluna Produtos */}
-        <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-black-light p-6">
           {/* Busca e Controles */}
           <div className="flex gap-4 mb-6">
             <div className="flex-1">
@@ -213,12 +209,12 @@ export const PDV: React.FC = () => {
                 placeholder="🔍 Buscar produto por nome..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-black-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-nunito"
               />
             </div>
             <button
               onClick={loadProducts}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg border border-gray-300 transition-colors"
+              className="bg-white-medium hover:bg-primary-light text-black-medium px-4 py-2 rounded-lg border border-black-light transition-colors font-nunito font-bold"
             >
               🔄 Atualizar
             </button>
@@ -226,10 +222,10 @@ export const PDV: React.FC = () => {
 
           {/* Info de Resultados */}
           <div className="mb-4 flex justify-between items-center">
-            <div className="text-sm text-gray-600">
+            <div className="text-base text-black-medium">
               {search ? (
                 <span>
-                  Buscando por: "<span className="font-medium">"{search}"</span>" • 
+                  Buscando por: "<span className="font-bold">"{search}"</span>" • 
                   {filteredProducts.length} produto(s) encontrado(s)
                 </span>
               ) : (
@@ -242,7 +238,7 @@ export const PDV: React.FC = () => {
             {cart.length > 0 && (
               <button
                 onClick={clearCart}
-                className="text-sm text-error hover:text-red-700 transition-colors"
+                className="text-base text-error hover:text-red-700 transition-colors font-nunito"
               >
                 🗑️ Limpar Carrinho
               </button>
@@ -254,29 +250,29 @@ export const PDV: React.FC = () => {
             {filteredProducts.map(product => (
               <div
                 key={product.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-500 hover:shadow-md transition-all cursor-pointer group"
+                className="bg-white border border-black-light rounded-lg p-4 hover:border-primary hover:shadow-md transition-all cursor-pointer group"
                 onClick={() => addToCart(product)}
               >
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-medium text-gray-900 group-hover:text-primary-600 line-clamp-2 flex-1">
+                  <h3 className="font-bold text-black group-hover:text-primary line-clamp-2 flex-1 text-lg">
                     {product.descricao}
                   </h3>
-                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full ml-2">
+                  <span className="bg-secondary-light text-secondary text-sm px-2 py-1 rounded-full ml-2 font-bold">
                     #{product.id}
                   </span>
                 </div>
                 
-                <p className="text-lg font-bold text-success">
+                <p className="text-xl font-bold text-success">
                   R$ {product.preco}
                 </p>
                 
                 {product.vendedor_nome && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-sm text-black-light mt-1">
                     Cadastrado por: {product.vendedor_nome}
                   </p>
                 )}
                 
-                <button className="w-full mt-3 bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                <button className="w-full mt-3 bg-primary hover:bg-primary-hover text-white py-2 px-4 rounded-lg transition-colors font-nunito font-bold text-base">
                   + Adicionar ao Carrinho
                 </button>
               </div>
@@ -287,23 +283,23 @@ export const PDV: React.FC = () => {
             <div className="text-center py-12">
               {search ? (
                 <>
-                  <div className="text-gray-400 text-6xl mb-4">🔍</div>
-                  <p className="text-gray-500 text-lg">Nenhum produto encontrado</p>
-                  <p className="text-gray-400 mt-1">
-                    Não encontramos produtos para "<span className="font-medium">{search}</span>"
+                  <div className="text-black-light text-6xl mb-4">🔍</div>
+                  <p className="text-black-medium text-xl">Nenhum produto encontrado</p>
+                  <p className="text-black-light mt-1 text-lg">
+                    Não encontramos produtos para "<span className="font-bold">{search}</span>"
                   </p>
                   <button 
                     onClick={() => setSearch('')}
-                    className="mt-4 text-primary-600 hover:text-primary-700"
+                    className="mt-4 text-primary hover:text-primary-medium transition-colors font-nunito font-bold text-lg"
                   >
                     Limpar busca e ver todos os produtos
                   </button>
                 </>
               ) : (
                 <>
-                  <div className="text-gray-400 text-6xl mb-4">📦</div>
-                  <p className="text-gray-500 text-lg">Nenhum produto cadastrado</p>
-                  <p className="text-gray-400 mt-1">
+                  <div className="text-black-light text-6xl mb-4">📦</div>
+                  <p className="text-black-medium text-xl">Nenhum produto cadastrado</p>
+                  <p className="text-black-light mt-1 text-lg">
                     Cadastre produtos no sistema para começar as vendas
                   </p>
                 </>
@@ -313,19 +309,19 @@ export const PDV: React.FC = () => {
         </div>
 
         {/* Coluna Carrinho */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col">
+        <div className="bg-white rounded-xl shadow-sm border border-black-light flex flex-col">
           {/* Header do Carrinho */}
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-black-light">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900">🛍️ Carrinho</h2>
+              <h2 className="text-2xl font-bold text-black">🛍️ Carrinho</h2>
               <div className="flex items-center gap-2">
-                <span className="bg-primary-100 text-primary-800 text-sm font-medium px-2 py-1 rounded-full">
+                <span className="bg-primary-light text-primary text-base font-bold px-3 py-1 rounded-full">
                   {cart.length} itens
                 </span>
                 {cart.length > 0 && (
                   <button
                     onClick={clearCart}
-                    className="text-gray-400 hover:text-error transition-colors text-sm"
+                    className="text-black-light hover:text-error transition-colors text-base"
                     title="Limpar carrinho"
                   >
                     🗑️
@@ -339,28 +335,28 @@ export const PDV: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-6">
             {cart.length === 0 ? (
               <div className="text-center py-12">
-                <div className="text-gray-400 text-6xl mb-4">🛒</div>
-                <p className="text-gray-500">Carrinho vazio</p>
-                <p className="text-gray-400 text-sm mt-1">
+                <div className="text-black-light text-6xl mb-4">🛒</div>
+                <p className="text-black-medium text-lg">Carrinho vazio</p>
+                <p className="text-black-light text-base mt-1">
                   Clique nos produtos para adicionar
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
                 {cart.map(item => (
-                  <div key={item.product.id} className="bg-gray-50 rounded-lg p-4">
+                  <div key={item.product.id} className="bg-white-medium rounded-lg p-4">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">
+                        <h4 className="font-bold text-black text-lg">
                           {item.product.descricao}
                         </h4>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-base text-black-medium mt-1">
                           R$ {item.product.preco} cada
                         </p>
                       </div>
                       <button
                         onClick={() => removeFromCart(item.product.id)}
-                        className="text-gray-400 hover:text-error transition-colors ml-2"
+                        className="text-black-light hover:text-error transition-colors ml-2"
                         title="Remover item"
                       >
                         🗑️
@@ -371,23 +367,23 @@ export const PDV: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                          className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                          className="w-8 h-8 flex items-center justify-center border border-black-light rounded-lg hover:bg-primary-light transition-colors font-bold"
                         >
                           -
                         </button>
-                        <span className="font-medium w-8 text-center text-lg">
+                        <span className="font-bold w-8 text-center text-lg">
                           {item.quantity}
                         </span>
                         <button
                           onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                          className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                          className="w-8 h-8 flex items-center justify-center border border-black-light rounded-lg hover:bg-primary-light transition-colors font-bold"
                         >
                           +
                         </button>
                       </div>
                       
                       <div className="text-right">
-                        <p className="font-bold text-success text-lg">
+                        <p className="font-bold text-success text-xl">
                           R$ {(item.product.preco * item.quantity).toFixed(2)}
                         </p>
                       </div>
@@ -400,16 +396,16 @@ export const PDV: React.FC = () => {
 
           {/* Footer do Carrinho */}
           {cart.length > 0 && (
-            <div className="p-6 border-t border-gray-200 space-y-6">
+            <div className="p-6 border-t border-black-light space-y-6">
               {/* Total */}
               <div className="space-y-3">
-                <div className="flex justify-between items-center text-lg">
-                  <span className="font-medium">Total:</span>
-                  <span className="font-bold text-2xl text-gray-900">
+                <div className="flex justify-between items-center text-xl">
+                  <span className="font-bold">Total:</span>
+                  <span className="font-bold text-3xl text-black">
                     R$ {getTotal().toFixed(2)}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-600">
+                <div className="flex justify-between text-base text-black-medium">
                   <span>Itens no carrinho:</span>
                   <span>{cart.length} produto(s)</span>
                 </div>
@@ -418,7 +414,7 @@ export const PDV: React.FC = () => {
               {/* Botão Finalizar */}
               <button
                 onClick={openPaymentModal}
-                className="w-full bg-success hover:bg-green-700 text-white py-4 px-6 rounded-lg font-bold text-lg transition-colors shadow-lg"
+                className="w-full bg-success hover:bg-green-700 text-white py-4 px-6 rounded-lg font-nunito font-bold text-xl transition-colors shadow-lg"
               >
                 💳 Finalizar Venda
               </button>

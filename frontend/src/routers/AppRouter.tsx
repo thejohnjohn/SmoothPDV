@@ -24,7 +24,7 @@ export const AppRouter: React.FC = () => {
       {/* Public Routes */}
       <Route 
         path="/login" 
-        element={!user ? <Login /> : <Navigate to="/dashboard" />} 
+        element={!user ? <Login /> : <Navigate to="/pdv" />} 
       />
       
       {/* Protected Routes */}
@@ -32,7 +32,7 @@ export const AppRouter: React.FC = () => {
         path="/" 
         element={user ? <Layout /> : <Navigate to="/login" />}
       >
-        <Route index element={<Navigate to="/dashboard" />} />
+        <Route index element={<Navigate to="/pdv" />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="pdv" element={<PDV />} />
         <Route path="products" element={<Products />} />
