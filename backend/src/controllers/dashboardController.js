@@ -1,49 +1,56 @@
-import { Usuario } from '../entities/Usuario.js';
-
 export const dashboardController = {
-  // Dashboard para Admin (vê tudo)
+  // Dashboard para Admin (vê todas as lojas)
   async getAdminDashboard(req, res) {
     try {
       const { startDate, endDate } = req.query;
       
-      const metrics = await req.db.raw(`
-        SELECT 
-          COUNT(DISTINCT c.id) as total_vendas,
-          COALESCE(SUM(p.valor), 0) as total_faturado,
-          COUNT(DISTINCT c.id_cliente) as clientes_ativos,
-          COUNT(DISTINCT u.id) as total_usuarios,
-          (SELECT COUNT(*) FROM mercadoria) as total_produtos,
-          (SELECT AVG(p.valor) FROM pagamento p 
-           JOIN compra c ON p.idcompra = c.id 
-           WHERE c.data BETWEEN ? AND ?) as ticket_medio
-        FROM compra c
-        LEFT JOIN pagamento p ON c.id = p.idcompra
-        LEFT JOIN usuario u ON c.id_cliente = u.id
-        WHERE c.data BETWEEN ? AND ?
-      `, [startDate, endDate, startDate, endDate]);
-
-      // Vendas por vendedor
-      const salesBySeller = await req.db('compra')
-        .select('u.nome as vendedor', req.db.raw('COUNT(c.id) as total_vendas'))
-        .leftJoin('usuario as u', 'c.id_cliente', 'u.id')
+      // Métricas totais (todas as lojas)
+      const metrics = await req.db('compra as c')
+        .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
+        .leftJoin('loja as l', 'c.id_loja', 'l.id')
         .whereBetween('c.data', [startDate, endDate])
-        .groupBy('u.nome')
-        .orderBy('total_vendas', 'desc');
+        .select(
+          req.db.raw('COUNT(DISTINCT c.id) as total_vendas'),
+          req.db.raw('COALESCE(SUM(p.valor), 0) as total_faturado'),
+          req.db.raw('COUNT(DISTINCT c.id_vendedor) as vendedores_ativos'),
+          req.db.raw('COUNT(DISTINCT l.id) as lojas_ativas'),
+          req.db.raw('(SELECT COUNT(*) FROM usuario WHERE tipo = \'VENDEDOR\') as total_vendedores'),
+          req.db.raw('COALESCE(SUM(p.valor) / NULLIF(COUNT(DISTINCT c.id), 0), 0) as ticket_medio')
+        )
+        .first();
 
-      // Produtos mais vendidos
-      const topProducts = await req.db('item_mercadoria as im')
-        .select('m.descricao', req.db.raw('SUM(im.quantidade) as quantidade_vendida'))
-        .leftJoin('mercadoria as m', 'im.idmercadoria', 'm.id')
-        .leftJoin('compra as c', 'im.idcompra', 'c.id')
+      // Vendas por vendedor (todas as lojas)
+      const salesBySeller = await req.db('compra as c')
+        .select(
+          'u.nome as vendedor',
+          'l.nome as loja',
+          req.db.raw('COUNT(c.id) as total_vendas'),
+          req.db.raw('COALESCE(SUM(p.valor), 0) as total_vendido')
+        )
+        .leftJoin('usuario as u', 'c.id_vendedor', 'u.id')
+        .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
+        .leftJoin('loja as l', 'c.id_loja', 'l.id')
         .whereBetween('c.data', [startDate, endDate])
-        .groupBy('m.descricao')
-        .orderBy('quantidade_vendida', 'desc')
-        .limit(10);
+        .groupBy('u.nome', 'l.nome')
+        .orderBy('total_vendido', 'desc');
+
+      // Vendas por loja
+      const salesByStore = await req.db('compra as c')
+        .select(
+          'l.nome as loja',
+          req.db.raw('COUNT(c.id) as total_vendas'),
+          req.db.raw('COALESCE(SUM(p.valor), 0) as total_faturado')
+        )
+        .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
+        .leftJoin('loja as l', 'c.id_loja', 'l.id')
+        .whereBetween('c.data', [startDate, endDate])
+        .groupBy('l.nome')
+        .orderBy('total_faturado', 'desc');
 
       res.json({
-        metrics: metrics.rows[0],
+        metrics,
         salesBySeller,
-        topProducts,
+        salesByStore,
         periodo: { startDate, endDate }
       });
 
@@ -53,57 +60,60 @@ export const dashboardController = {
     }
   },
 
-  // Dashboard para Gerente (vê apenas sua equipe)
+  // Dashboard para Gerente (vê apenas sua loja)
   async getGerenteDashboard(req, res) {
     try {
       const { startDate, endDate } = req.query;
-      const gerenteId = req.user.id;
+      const user = req.user;
 
-      // Buscar vendedores do gerente - CORRIGIDO
-      const vendedores = await req.db('usuario')
-        .where('tipo', 'VENDEDOR'); // Simplificado - ajuste conforme sua lógica
-
-      const vendedoresIds = vendedores.map(v => v.id);
-
-      // CORREÇÃO: Usar query builder em vez de raw para arrays
+      // Métricas da loja do gerente
       const metrics = await req.db('compra as c')
         .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
-        .whereIn('c.id_cliente', vendedoresIds.length > 0 ? vendedoresIds : [0]) // Evitar array vazio
+        .where('c.id_loja', user.id_loja)
         .whereBetween('c.data', [startDate, endDate])
         .select(
           req.db.raw('COUNT(DISTINCT c.id) as total_vendas'),
           req.db.raw('COALESCE(SUM(p.valor), 0) as total_faturado'),
-          req.db.raw('COUNT(DISTINCT c.id_cliente) as clientes_ativos')
+          req.db.raw('COUNT(DISTINCT c.id_vendedor) as vendedores_ativos'),
+          req.db.raw('(SELECT COUNT(*) FROM usuario WHERE id_loja = ? AND tipo = \'VENDEDOR\') as total_vendedores', [user.id_loja]),
+          req.db.raw('(SELECT COUNT(*) FROM mercadoria WHERE id_loja = ?) as total_produtos', [user.id_loja]),
+          req.db.raw('COALESCE(SUM(p.valor) / NULLIF(COUNT(DISTINCT c.id), 0), 0) as ticket_medio')
         )
         .first();
 
-      // CORREÇÃO: Contagem de produtos separada
-      const totalProdutos = await req.db('mercadoria')
-        .whereIn('id_usuario', vendedoresIds.length > 0 ? vendedoresIds : [0])
-        .count('* as total')
-        .first();
-
-      // Adicionar total de produtos às métricas
-      metrics.total_produtos = totalProdutos.total;
-
-      // Performance por vendedor - CORRIGIDO
+      // Performance por vendedor (apenas da loja do gerente)
       const performanceVendedores = await req.db('compra as c')
         .select(
           'u.nome as vendedor',
           req.db.raw('COUNT(c.id) as total_vendas'),
           req.db.raw('COALESCE(SUM(p.valor), 0) as total_vendido')
         )
-        .leftJoin('usuario as u', 'c.id_cliente', 'u.id')
+        .leftJoin('usuario as u', 'c.id_vendedor', 'u.id')
         .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
-        .whereIn('c.id_cliente', vendedoresIds.length > 0 ? vendedoresIds : [0])
+        .where('c.id_loja', user.id_loja)
         .whereBetween('c.data', [startDate, endDate])
         .groupBy('u.nome')
         .orderBy('total_vendido', 'desc');
 
+      // Produtos mais vendidos na loja
+      const topProducts = await req.db('item_mercadoria as im')
+        .select(
+          'm.descricao',
+          req.db.raw('SUM(im.quantidade) as quantidade_vendida'),
+          req.db.raw('SUM(im.quantidade * m.preco) as total_vendido')
+        )
+        .leftJoin('mercadoria as m', 'im.idmercadoria', 'm.id')
+        .leftJoin('compra as c', 'im.idcompra', 'c.id')
+        .where('c.id_loja', user.id_loja)
+        .whereBetween('c.data', [startDate, endDate])
+        .groupBy('m.descricao')
+        .orderBy('quantidade_vendida', 'desc')
+        .limit(10);
+
       res.json({
         metrics,
         performanceVendedores,
-        totalVendedores: vendedores.length,
+        topProducts,
         periodo: { startDate, endDate }
       });
 
@@ -117,22 +127,21 @@ export const dashboardController = {
   async getVendedorDashboard(req, res) {
     try {
       const { startDate, endDate } = req.query;
-      const vendedorId = req.user.id;
+      const user = req.user;
 
-      const metrics = await req.db.raw(`
-        SELECT 
-          COUNT(DISTINCT c.id) as total_vendas,
-          COALESCE(SUM(p.valor), 0) as total_vendido,
-          COUNT(DISTINCT c.id_cliente) as clientes_ativos,
-          AVG(p.valor) as ticket_medio,
-          (SELECT COUNT(*) FROM mercadoria WHERE id_usuario = ?) as produtos_cadastrados
-        FROM compra c
-        LEFT JOIN pagamento p ON c.id = p.idcompra
-        WHERE c.id_cliente = ?
-        AND c.data BETWEEN ? AND ?
-      `, [vendedorId, vendedorId, startDate, endDate]);
+      const metrics = await req.db('compra as c')
+        .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
+        .where('c.id_vendedor', user.id)
+        .whereBetween('c.data', [startDate, endDate])
+        .select(
+          req.db.raw('COUNT(DISTINCT c.id) as total_vendas'),
+          req.db.raw('COALESCE(SUM(p.valor), 0) as total_vendido'),
+          req.db.raw('COALESCE(SUM(p.valor) / NULLIF(COUNT(DISTINCT c.id), 0), 0) as ticket_medio'),
+          req.db.raw('(SELECT COUNT(*) FROM mercadoria WHERE id_usuario = ?) as produtos_cadastrados', [user.id])
+        )
+        .first();
 
-      // Vendas por dia (últimos 7 dias)
+      // Vendas por dia
       const vendasPorDia = await req.db('compra as c')
         .select(
           req.db.raw('DATE(c.data) as dia'),
@@ -140,13 +149,13 @@ export const dashboardController = {
           req.db.raw('COALESCE(SUM(p.valor), 0) as total_dia')
         )
         .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
-        .where('c.id_cliente', vendedorId)
+        .where('c.id_vendedor', user.id)
         .whereBetween('c.data', [startDate, endDate])
         .groupBy('dia')
         .orderBy('dia', 'asc');
 
       res.json({
-        metrics: metrics.rows[0],
+        metrics,
         vendasPorDia,
         periodo: { startDate, endDate }
       });

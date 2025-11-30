@@ -2,32 +2,32 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Header } from './Header/Header';
 import { Sidebar } from './Sidebar/Sidebar';
-import { useAuth } from '../../hooks/useAuth'; // Ajuste o caminho conforme necessário
+import { useAuth } from '../../hooks/useAuth';
 
 export const Layout: React.FC = () => {
   const { user } = useAuth();
   
-  // Verifica se o usuário é funcionário (não admin)
-  const isEmployee = user?.tipo === 'VENDEDOR';
+  // Verifica se o usuário é vendedor (não mostra sidebar)
+  const isVendedor = user?.tipo === 'VENDEDOR';
 
   return (
-    <div className="flex flex-col h-screen bg-white-light font-nunito">
-      {/* Header - fixo no topo */}
-      <header className="bg-white border-b border-black-light shadow-sm">
-        <Header />
-      </header>
+    <div className="flex h-screen bg-white-light font-nunito">
+      {/* Sidebar - apenas para Admin e Gerente */}
+      {!isVendedor && (
+        <aside className="w-64 bg-white border-r border-black-light flex-shrink-0">
+          <Sidebar />
+        </aside>
+      )}
 
-      {/* Container principal - Sidebar + Main lado a lado */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - coluna à esquerda (apenas para não-funcionários) */}
-        {!isEmployee && (
-          <aside className="w-64 bg-white border-r border-black-light">
-            <Sidebar />
-          </aside>
-        )}
+      {/* Conteúdo principal */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="bg-white border-b border-black-light shadow-sm flex-shrink-0">
+          <Header />
+        </header>
 
-        {/* Main content - área principal rolável */}
-        <main className={`${isEmployee ? 'flex-1' : 'flex-1'} overflow-auto`}>
+        {/* Main content */}
+        <main className="flex-1 overflow-auto">
           <div className="p-6">
             <Outlet />
           </div>

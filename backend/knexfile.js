@@ -12,8 +12,11 @@ export default {
       min: 2,
       max: 10
     },
-    migrations: {
+    migrations: { // Não usado no momento
       tableName: 'knex_migrations'
+    },
+    seeds: { // Não usado no momento
+      directory: './seeds' 
     }
   }
 }

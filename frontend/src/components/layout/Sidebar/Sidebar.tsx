@@ -10,44 +10,29 @@ export const Sidebar: React.FC = () => {
     { 
       path: '/dashboard', 
       label: 'Dashboard', 
-      icon: '📊', 
-      roles: ['ADMIN', 'GERENTE', 'VENDEDOR', 'CLIENTE'] 
+      icon: '📊'
+    },
+    { 
+      path: user?.tipo === 'ADMIN' ? '/admin' : '/gerente', 
+      label: user?.tipo === 'ADMIN' ? 'Admin' : 'Gerente', 
+      icon: user?.tipo === 'ADMIN' ? '🏢' : '👔'
     },
     { 
       path: '/pdv', 
       label: 'PDV', 
-      icon: '🛒', 
-      roles: ['ADMIN', 'GERENTE', 'VENDEDOR'] 
-    },
-    { 
-      path: '/sales', 
-      label: 'Vendas', 
-      icon: '💰', 
-      roles: ['ADMIN', 'GERENTE', 'VENDEDOR', 'CLIENTE'] 
+      icon: '🛒'
     },
     { 
       path: '/products', 
       label: 'Produtos', 
-      icon: '📦', 
-      roles: ['ADMIN', 'GERENTE', 'VENDEDOR', 'CLIENTE'] 
+      icon: '📦'
     },
     { 
-      path: '/customers', 
-      label: 'Clientes', 
-      icon: '👥', 
-      roles: ['ADMIN', 'GERENTE'] 
-    },
-    { 
-      path: '/reports', 
-      label: 'Relatórios', 
-      icon: '📋', 
-      roles: ['ADMIN', 'GERENTE'] 
+      path: '/sales', 
+      label: 'Vendas', 
+      icon: '💰'
     },
   ];
-
-  const filteredMenuItems = menuItems.filter(item => 
-    !['CLIENTE', 'VENDEDOR'].includes(user?.tipo || 'CLIENTE')
-  );
 
   return (
     <aside className="w-full h-full bg-white font-nunito">
@@ -67,7 +52,7 @@ export const Sidebar: React.FC = () => {
       {/* Navegação */}
       <nav className="p-4">
         <ul className="space-y-2">
-          {filteredMenuItems.map(item => {
+          {menuItems.map(item => {
             const isActive = location.pathname === item.path;
             
             return (
@@ -85,7 +70,6 @@ export const Sidebar: React.FC = () => {
                   <span className="text-lg">{item.icon}</span>
                   <span className="text-base">{item.label}</span>
                   
-                  {/* Indicador de página ativa */}
                   {isActive && (
                     <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
                   )}
@@ -95,21 +79,6 @@ export const Sidebar: React.FC = () => {
           })}
         </ul>
       </nav>
-
-      {/* Footer do Sidebar */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-black-light bg-white-medium">
-        <div className="text-center">
-          <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-2 text-sm font-bold">
-            {user?.nome?.charAt(0) || 'U'}
-          </div>
-          <p className="text-sm font-bold text-black truncate">
-            {user?.nome || 'Usuário'}
-          </p>
-          <p className="text-xs text-black-medium capitalize">
-            {user?.tipo?.toLowerCase() || 'cliente'}
-          </p>
-        </div>
-      </div>
     </aside>
   );
 };

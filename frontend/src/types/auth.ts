@@ -1,19 +1,31 @@
-export interface User {
+export interface Loja {
   id: number;
   nome: string;
-  email: string;
-  tipo: 'ADMIN' | 'GERENTE' | 'VENDEDOR' | 'CLIENTE';
+  endereco: string;
+  telefone: string;
+  status: 'ativo' | 'inativo';
+  gerente_id?: number;
   criado_em: string;
 }
 
-export interface LoginData {
+export interface Gerente {
+  id: number;
+  nome: string;
   email: string;
-  senha: string;
+  loja_id?: number;
+  loja_nome?: string;
+  status: 'ativo' | 'inativo';
+  criado_em: string;
 }
 
-export interface AuthContextType {
-  user: User | null;
-  login: (data: LoginData) => Promise<void>;
-  logout: () => void;
-  loading: boolean;
+export interface Vendedor {
+  id: number;
+  nome: string;
+  email: string;
+  loja_id: number;
+  loja_nome?: string;
+  status: 'ativo' | 'inativo';
+  criado_em: string;
 }
+
+export type CrudOperation = 'create' | 'update' | 'view';

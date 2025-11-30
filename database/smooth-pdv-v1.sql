@@ -1,8 +1,7 @@
 CREATE TYPE "tipo_usuario" AS ENUM (
   'ADMIN',
   'GERENTE',
-  'VENDEDOR',
-  'CLIENTE'
+  'VENDEDOR'
 );
 
 CREATE TABLE "usuario" (

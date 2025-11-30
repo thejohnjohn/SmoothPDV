@@ -140,3 +140,6 @@ vite.config.ts.timestamp-*
 
 # Misc
 frontend-structure-project*
+/migration*
+prompt*
+script.sh

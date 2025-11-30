@@ -9,22 +9,42 @@ import { Dashboard } from '../pages/Dashboard/Dashboard';
 import { Products } from '../pages/Products/Products';
 import { Sales } from '../pages/Sales/Sales';
 import { PDV } from '../pages/PDV/PDV';
-// import { Customers } from '../pages/Customers/Customers';
-// import { Reports } from '../pages/Reports/Reports';
+import { Admin } from '../pages/Admin/Admin';
+import { Gerente } from '../pages/Gerente/Gerente';
 
 export const AppRouter: React.FC = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Carregando...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
   }
+
+  // Redirecionamento baseado no tipo de usuário
+  const getDefaultRoute = () => {
+    if (!user) return '/login';
+    
+    switch (user.tipo) {
+      case 'ADMIN':
+        return '/admin';
+      case 'GERENTE':
+        return '/gerente';
+      case 'VENDEDOR':
+        return '/pdv';
+      default:
+        return '/pdv';
+    }
+  };
 
   return (
     <Routes>
       {/* Public Routes */}
       <Route 
         path="/login" 
-        element={!user ? <Login /> : <Navigate to="/pdv" />} 
+        element={!user ? <Login /> : <Navigate to={getDefaultRoute()} />} 
       />
       
       {/* Protected Routes */}
@@ -32,17 +52,19 @@ export const AppRouter: React.FC = () => {
         path="/" 
         element={user ? <Layout /> : <Navigate to="/login" />}
       >
-        <Route index element={<Navigate to="/pdv" />} />
+        <Route index element={<Navigate to={getDefaultRoute()} />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="pdv" element={<PDV />} />
         <Route path="products" element={<Products />} />
         <Route path="sales" element={<Sales />} />
-        {/* <Route path="customers" element={<Customers />} />
-        <Route path="reports" element={<Reports />} /> */}
+        
+        {/* Rotas específicas por tipo de usuário */}
+        <Route path="admin" element={<Admin />} />
+        <Route path="gerente" element={<Gerente />} />
       </Route>
 
       {/* 404 */}
-      <Route path="*" element={<Navigate to="/dashboard" />} />
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 };
