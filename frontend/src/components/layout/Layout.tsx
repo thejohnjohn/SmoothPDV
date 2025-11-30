@@ -8,12 +8,12 @@ export const Layout: React.FC = () => {
   const { user } = useAuth();
   
   // Verifica se o usuário é vendedor (não mostra sidebar)
-  const isVendedor = user?.tipo === 'VENDEDOR';
+  const isManager = user?.tipo === 'GERENTE';
 
   return (
     <div className="flex h-screen bg-white-light font-nunito">
       {/* Sidebar - apenas para Admin e Gerente */}
-      {!isVendedor && (
+      {isManager && (
         <aside className="w-64 bg-white border-r border-black-light flex-shrink-0">
           <Sidebar />
         </aside>

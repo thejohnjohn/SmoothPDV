@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { dashboardService } from '../../services/dashboardService';
+import { reportService } from '../../services/reportService';
+import { emailService } from '../../services/emailService';
 import { PDFModal } from '../../components/PDFModal/PDFModal';
 import { EmailModal } from '../../components/EmailModal/EmailModal';
 
 interface DashboardData {
   metrics: any;
   salesBySeller?: any[];
+  salesByStore?: any[]; // ✅ CORREÇÃO: Adicionada esta propriedade
   topProducts?: any[];
   performanceVendedores?: any[];
   vendasPorDia?: any[];
@@ -37,14 +40,82 @@ export const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       
-      // 🔥 CORREÇÃO: Passar o tipo de usuário para o service
-      const dashboardData = await dashboardService.getDashboard(dateRange, user?.tipo || 'VENDEDOR');
+      // ✅ CORREÇÃO: Usar os métodos específicos por tipo de usuário
+      let dashboardData;
+      switch (user?.tipo) {
+        case 'ADMIN':
+          dashboardData = await dashboardService.getAdminDashboard(dateRange);
+          break;
+        case 'GERENTE':
+          dashboardData = await dashboardService.getGerenteDashboard(dateRange);
+          break;
+        case 'VENDEDOR':
+          dashboardData = await dashboardService.getVendedorDashboard(dateRange);
+          break;
+        default:
+          dashboardData = await dashboardService.getVendedorDashboard(dateRange);
+      }
+      
       setData(dashboardData);
       
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ CORREÇÃO: Usar reportService para gerar PDF
+  const handleGeneratePDF = async (pdfData: any) => {
+    try {
+      const reportData = {
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        reportType: 'vendas' as const,
+        filters: {
+          userType: user?.tipo,
+          metrics: data?.metrics
+        }
+      };
+
+      const pdfBlob = await reportService.generatePDF(reportData);
+      
+      // Criar link para download do PDF
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `relatorio-${dateRange.startDate}-${dateRange.endDate}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      
+      alert('✅ PDF gerado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      alert('❌ Erro ao gerar PDF');
+    }
+  };
+
+  // ✅ CORREÇÃO: Usar emailService para enviar e-mail
+ const handleSendEmail = async (emailData: any) => {
+    try {
+      const reportPayload = {
+        recipientEmail: emailData.recipientEmail,
+        subject: emailData.subject || `Relatório Dashboard - ${dateRange.startDate} à ${dateRange.endDate}`,
+        message: emailData.message,
+        dashboardData: data, // ✅ ENVIANDO OS DADOS COMPLETOS DO DASHBOARD
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        reportType: 'vendas' as const
+      };
+
+      console.log('📤 Enviando e-mail com payload:', reportPayload);
+      
+      // ✅ CORREÇÃO: Manter reportService.sendEmail() mas com payload correto
+      await reportService.sendEmail(reportPayload);
+      alert('✅ E-mail enviado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao enviar e-mail:', error);
+      alert('❌ Erro ao enviar e-mail');
     }
   };
 
@@ -59,36 +130,6 @@ export const Dashboard: React.FC = () => {
   if (!data) return <div>Erro ao carregar dashboard</div>;
 
   const { metrics, periodo } = data;
-
-  const handleGeneratePDF = async (pdfData: any) => {
-    try {
-      const response = await dashboardService.generatePDF(pdfData);
-      
-      // Criar link para download do PDF
-      const blob = new Blob([response], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `relatorio-${Date.now()}.pdf`;
-      link.click();
-      window.URL.revokeObjectURL(url);
-      
-      alert('✅ PDF gerado com sucesso!');
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
-      alert('❌ Erro ao gerar PDF');
-    }
-  };
-
-  const handleSendEmail = async (emailData: any) => {
-    try {
-      const response = await dashboardService.sendEmailReport(emailData);
-      alert('✅ E-mail enviado com sucesso!');
-    } catch (error) {
-      console.error('Erro ao enviar e-mail:', error);
-      alert('❌ Erro ao enviar e-mail');
-    }
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -127,7 +168,7 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total de Vendas"
-          value={metrics.total_vendas}
+          value={metrics.total_vendas || 0}
           icon="💰"
           color="blue"
         />
@@ -138,8 +179,8 @@ export const Dashboard: React.FC = () => {
           color="green"
         />
         <MetricCard
-          title="Clientes Ativos"
-          value={metrics.clientes_ativos}
+          title="Vendedores Ativos"
+          value={metrics.vendedores_ativos || metrics.total_vendedores || 0}
           icon="👥"
           color="purple"
         />
@@ -179,6 +220,7 @@ export const Dashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
       {/* Modais */}
       <PDFModal
         isOpen={showPDFModal}
@@ -215,6 +257,41 @@ const AdminDashboard: React.FC<{ data: DashboardData }> = ({ data }) => (
       </div>
     </div>
 
+    {/* Vendas por Loja */}
+    <div className="bg-white rounded-lg p-6 border border-gray-200">
+      <h3 className="text-lg font-semibold mb-4">🏢 Vendas por Loja</h3>
+      <div className="space-y-3">
+        {data.salesByStore?.map((loja, index) => (
+          <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+            <span className="truncate">{loja.loja}</span>
+            <span className="font-semibold">R$ {parseFloat(loja.total_faturado || 0).toFixed(2)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const GerenteDashboard: React.FC<{ data: DashboardData }> = ({ data }) => (
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {/* Performance da Equipe */}
+    <div className="bg-white rounded-lg p-6 border border-gray-200">
+      <h3 className="text-lg font-semibold mb-4">👥 Performance da Equipe</h3>
+      <div className="space-y-3">
+        {data.performanceVendedores?.map((vendedor, index) => (
+          <div key={index} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+            <div>
+              <p className="font-medium">{vendedor.vendedor}</p>
+              <p className="text-sm text-gray-600">{vendedor.total_vendas} vendas</p>
+            </div>
+            <span className="text-lg font-bold text-green-600">
+              R$ {parseFloat(vendedor.total_vendido || 0).toFixed(2)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+
     {/* Produtos Mais Vendidos */}
     <div className="bg-white rounded-lg p-6 border border-gray-200">
       <h3 className="text-lg font-semibold mb-4">📦 Produtos Mais Vendidos</h3>
@@ -230,25 +307,6 @@ const AdminDashboard: React.FC<{ data: DashboardData }> = ({ data }) => (
   </div>
 );
 
-const GerenteDashboard: React.FC<{ data: DashboardData }> = ({ data }) => (
-  <div className="bg-white rounded-lg p-6 border border-gray-200">
-    <h3 className="text-lg font-semibold mb-4">👥 Performance da Equipe</h3>
-    <div className="space-y-3">
-      {data.performanceVendedores?.map((vendedor, index) => (
-        <div key={index} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-          <div>
-            <p className="font-medium">{vendedor.vendedor}</p>
-            <p className="text-sm text-gray-600">{vendedor.total_vendas} vendas</p>
-          </div>
-          <span className="text-lg font-bold text-success">
-            R$ {parseFloat(vendedor.total_vendido).toFixed(2)}
-          </span>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
 const VendedorDashboard: React.FC<{ data: DashboardData }> = ({ data }) => (
   <div className="bg-white rounded-lg p-6 border border-gray-200">
     <h3 className="text-lg font-semibold mb-4">📈 Vendas por Dia</h3>
@@ -258,7 +316,7 @@ const VendedorDashboard: React.FC<{ data: DashboardData }> = ({ data }) => (
           <span>{new Date(venda.dia).toLocaleDateString()}</span>
           <div className="text-right">
             <p className="font-semibold">{venda.total_vendas} vendas</p>
-            <p className="text-sm text-success">R$ {parseFloat(venda.total_dia).toFixed(2)}</p>
+            <p className="text-sm text-green-600">R$ {parseFloat(venda.total_dia || 0).toFixed(2)}</p>
           </div>
         </div>
       ))}

@@ -10,17 +10,7 @@ export const canRegisterUsers = (req, res, next) => {
   });
 };
 
-export const canRegisterProducts = (req, res, next) => {
-  const user = req.user;
 
-  if (['ADMIN', 'GERENTE', 'VENDEDOR'].includes(user.tipo)) {
-    return next();
-  }
-  
-  return res.status(403).json({ 
-    error: 'Acesso negado. Permissão insuficiente para cadastrar produtos.' 
-  });
-};
 
 export const requireAdmin = (req, res, next) => {
   if (req.user.tipo === 'ADMIN') {

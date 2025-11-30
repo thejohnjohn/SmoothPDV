@@ -61,65 +61,150 @@ export const dashboardController = {
   },
 
   // Dashboard para Gerente (vê apenas sua loja)
-  async getGerenteDashboard(req, res) {
+async getGerenteDashboard(req, res) {
     try {
-      const { startDate, endDate } = req.query;
-      const user = req.user;
+      const currentUser = req.user;
+      const { data_inicio, data_fim } = req.query;
 
-      // Métricas da loja do gerente
+      console.log('📊 Iniciando dashboard do gerente para loja:', currentUser.id_loja);
+
+      // 🆕 CORREÇÃO: Validar se usuário é gerente
+      if (!currentUser.isGerente()) {
+        return res.status(403).json({ 
+          error: 'Acesso negado. Apenas gerentes podem acessar este dashboard.' 
+        });
+      }
+
+      // 🆕 CORREÇÃO: Definir período padrão (últimos 30 dias)
+      const endDate = data_fim || new Date().toISOString().split('T')[0];
+      const startDate = data_inicio || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      console.log(`📅 Período: ${startDate} à ${endDate}`);
+
+      // 🆕 CORREÇÃO: Buscar métricas principais com nomes de colunas corretos
       const metrics = await req.db('compra as c')
         .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
-        .where('c.id_loja', user.id_loja)
-        .whereBetween('c.data', [startDate, endDate])
+        .where('c.id_loja', currentUser.id_loja)
+        .whereBetween('c.data', [startDate, endDate]) // 🆕 CORREÇÃO: Usar nome correto da coluna
         .select(
           req.db.raw('COUNT(DISTINCT c.id) as total_vendas'),
           req.db.raw('COALESCE(SUM(p.valor), 0) as total_faturado'),
           req.db.raw('COUNT(DISTINCT c.id_vendedor) as vendedores_ativos'),
-          req.db.raw('(SELECT COUNT(*) FROM usuario WHERE id_loja = ? AND tipo = \'VENDEDOR\') as total_vendedores', [user.id_loja]),
-          req.db.raw('(SELECT COUNT(*) FROM mercadoria WHERE id_loja = ?) as total_produtos', [user.id_loja]),
+          req.db.raw('(SELECT COUNT(*) FROM usuario WHERE id_loja = ? AND tipo = ?) as total_vendedores', [currentUser.id_loja, 'VENDEDOR']),
+          req.db.raw('(SELECT COUNT(*) FROM mercadoria WHERE id_loja = ?) as total_produtos', [currentUser.id_loja]),
           req.db.raw('COALESCE(SUM(p.valor) / NULLIF(COUNT(DISTINCT c.id), 0), 0) as ticket_medio')
         )
         .first();
 
-      // Performance por vendedor (apenas da loja do gerente)
-      const performanceVendedores = await req.db('compra as c')
-        .select(
-          'u.nome as vendedor',
-          req.db.raw('COUNT(c.id) as total_vendas'),
-          req.db.raw('COALESCE(SUM(p.valor), 0) as total_vendido')
-        )
-        .leftJoin('usuario as u', 'c.id_vendedor', 'u.id')
+      console.log('✅ Métricas principais obtidas:', metrics);
+
+      // 🆕 CORREÇÃO: Vendas por dia (últimos 7 dias)
+      const vendasPorDia = await req.db('compra as c')
         .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
-        .where('c.id_loja', user.id_loja)
-        .whereBetween('c.data', [startDate, endDate])
-        .groupBy('u.nome')
+        .where('c.id_loja', currentUser.id_loja)
+        .where('c.data', '>=', req.db.raw("CURRENT_DATE - INTERVAL '7 days'")) // 🆕 CORREÇÃO
+        .groupBy(req.db.raw('DATE(c.data)'))
+        .select(
+          req.db.raw('DATE(c.data) as dia'),
+          req.db.raw('COUNT(*) as total_vendas'),
+          req.db.raw('COALESCE(SUM(p.valor), 0) as total_dia')
+        )
+        .orderBy('dia', 'desc');
+
+      console.log(`✅ ${vendasPorDia.length} dias com vendas`);
+
+      // 🆕 CORREÇÃO: Performance dos vendedores
+      const performanceVendedores = await req.db('compra as c')
+        .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
+        .leftJoin('usuario as v', 'c.id_vendedor', 'v.id')
+        .where('c.id_loja', currentUser.id_loja)
+        .whereBetween('c.data', [startDate, endDate]) // 🆕 CORREÇÃO
+        .groupBy('v.id', 'v.nome')
+        .select(
+          'v.id',
+          'v.nome as vendedor',
+          req.db.raw('COUNT(DISTINCT c.id) as total_vendas'),
+          req.db.raw('COALESCE(SUM(p.valor), 0) as total_vendido'),
+          req.db.raw('COALESCE(AVG(p.valor), 0) as ticket_medio')
+        )
         .orderBy('total_vendido', 'desc');
 
-      // Produtos mais vendidos na loja
-      const topProducts = await req.db('item_mercadoria as im')
+      console.log(`✅ ${performanceVendedores.length} vendedores com performance`);
+
+      // 🆕 CORREÇÃO: Métodos de pagamento mais usados
+      const metodosPagamento = await req.db('compra as c')
+        .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
+        .where('c.id_loja', currentUser.id_loja)
+        .whereBetween('c.data', [startDate, endDate]) // 🆕 CORREÇÃO
+        .groupBy('p.metodo_pagamento')
         .select(
-          'm.descricao',
-          req.db.raw('SUM(im.quantidade) as quantidade_vendida'),
-          req.db.raw('SUM(im.quantidade * m.preco) as total_vendido')
+          'p.metodo_pagamento',
+          req.db.raw('COUNT(*) as total_vendas'),
+          req.db.raw('COALESCE(SUM(p.valor), 0) as total_valor')
         )
+        .orderBy('total_vendas', 'desc');
+
+      console.log(`✅ ${metodosPagamento.length} métodos de pagamento analisados`);
+
+      // 🆕 CORREÇÃO: Produtos mais vendidos
+      const produtosMaisVendidos = await req.db('item_mercadoria as im')
         .leftJoin('mercadoria as m', 'im.idmercadoria', 'm.id')
         .leftJoin('compra as c', 'im.idcompra', 'c.id')
-        .where('c.id_loja', user.id_loja)
-        .whereBetween('c.data', [startDate, endDate])
-        .groupBy('m.descricao')
+        .where('m.id_loja', currentUser.id_loja)
+        .whereBetween('c.data', [startDate, endDate]) // 🆕 CORREÇÃO
+        .groupBy('m.id', 'm.descricao', 'm.preco')
+        .select(
+          'm.id',
+          'm.descricao',
+          'm.preco',
+          req.db.raw('SUM(im.quantidade) as quantidade_vendida'),
+          req.db.raw('SUM(im.quantidade * m.preco) as faturamento_total')
+        )
         .orderBy('quantidade_vendida', 'desc')
         .limit(10);
 
-      res.json({
-        metrics,
-        performanceVendedores,
-        topProducts,
-        periodo: { startDate, endDate }
-      });
+      console.log(`✅ ${produtosMaisVendidos.length} produtos mais vendidos`);
+
+      // 🆕 CORREÇÃO: Resposta consolidada
+      const dashboardData = {
+        periodo: {
+          startDate: startDate,
+          endDate: endDate
+        },
+        metrics: {
+          ...metrics,
+          // 🆕 Métricas adicionais calculadas
+          dias_com_vendas: vendasPorDia.length,
+          produtos_mais_vendidos_count: produtosMaisVendidos.length
+        },
+        vendas_por_dia: vendasPorDia,
+        performance_vendedores: performanceVendedores,
+        metodos_pagamento: metodosPagamento,
+        produtos_mais_vendidos: produtosMaisVendidos,
+        loja: {
+          id: currentUser.id_loja,
+          nome: currentUser.loja_nome || 'Minha Loja'
+        }
+      };
+
+      console.log('✅ Dashboard do gerente gerado com sucesso');
+
+      res.json(dashboardData);
 
     } catch (error) {
-      console.error('Erro no dashboard gerente:', error);
-      res.status(500).json({ error: error.message });
+      console.error('❌ Erro ao gerar dashboard do gerente:', error);
+      
+      // 🆕 CORREÇÃO: Mensagem de erro mais específica
+      let errorMessage = error.message;
+      
+      if (error.message.includes('c.data') && error.message.includes('Undefined column')) {
+        errorMessage = 'Erro de estrutura do banco: coluna "data" não encontrada na tabela compra. Verifique o nome correto da coluna de data.';
+      }
+      
+      res.status(500).json({ 
+        error: 'Erro ao carregar dashboard',
+        details: errorMessage
+      });
     }
   },
 

@@ -103,12 +103,17 @@ export const saleController = {
       res.status(500).json({ error: error.message });
     }
   },
-   async createQuickSale(req, res) {
+   // src/controllers/saleController.js - MÉTODO REFATORADO
+
+async createQuickSale(req, res) {
     const trx = await req.db.transaction();
     
     try {
       const { itens, metodo_pagamento, valor_pago, observacao } = req.body;
       const currentUser = req.user;
+
+      console.log('🛒 Iniciando venda rápida para usuário:', currentUser.nome);
+      console.log('📦 Itens recebidos:', itens);
 
       // Validar itens
       if (!itens || itens.length === 0) {
@@ -120,16 +125,19 @@ export const saleController = {
       // Validar método de pagamento
       if (!Pagamento.isValidPaymentMethod(metodo_pagamento)) {
         return res.status(400).json({ 
-          error: 'Método de pagamento inválido'
+          error: 'Método de pagamento inválido. Use: DINHEIRO, CARTAO_CREDITO, CARTAO_DEBITO, PIX ou BOLETO'
         });
       }
 
-      // Calcular total da venda
+      // Calcular total da venda e validar produtos
       let totalVenda = 0;
       const itensComDetalhes = [];
+      const produtosValidos = [];
 
       // Validar e calcular cada item
       for (const item of itens) {
+        console.log(`🔍 Validando produto ID: ${item.idmercadoria}`);
+        
         const produto = await Mercadoria.findById(req.db, item.idmercadoria, currentUser);
         
         if (!produto) {
@@ -139,15 +147,15 @@ export const saleController = {
           });
         }
 
-        // Verificar se produto pertence à loja do vendedor
+        // Verificar se produto pertence à loja do usuário
         if (produto.id_loja !== currentUser.id_loja) {
           await trx.rollback();
           return res.status(403).json({ 
-            error: `Produto ${produto.descricao} não pertence à sua loja` 
+            error: `Produto "${produto.descricao}" não pertence à sua loja` 
           });
         }
 
-        const subtotal = produto.preco * item.quantidade;
+        const subtotal = parseFloat(produto.preco) * parseInt(item.quantidade);
         totalVenda += subtotal;
 
         itensComDetalhes.push({
@@ -156,32 +164,52 @@ export const saleController = {
           preco_unitario: produto.preco,
           subtotal
         });
+
+        produtosValidos.push(produto);
       }
 
-      // Validar pagamento
-      if (metodo_pagamento === 'DINHEIRO' && (!valor_pago || valor_pago < totalVenda)) {
-        await trx.rollback();
-        return res.status(400).json({ 
-          error: 'Valor pago insuficiente para o total da venda',
-          total_venda: totalVenda,
-          valor_pago: valor_pago
-        });
+      console.log(`💰 Total da venda calculado: R$ ${totalVenda.toFixed(2)}`);
+
+      // Validar pagamento para método DINHEIRO
+      if (metodo_pagamento === 'DINHEIRO') {
+        if (!valor_pago || valor_pago <= 0) {
+          await trx.rollback();
+          return res.status(400).json({ 
+            error: 'Para pagamento em DINHEIRO, o valor pago é obrigatório'
+          });
+        }
+        
+        if (parseFloat(valor_pago) < totalVenda) {
+          await trx.rollback();
+          return res.status(400).json({ 
+            error: 'Valor pago insuficiente para o total da venda',
+            total_venda: totalVenda.toFixed(2),
+            valor_pago: parseFloat(valor_pago).toFixed(2),
+            valor_insuficiente: (totalVenda - parseFloat(valor_pago)).toFixed(2)
+          });
+        }
       }
 
       // Calcular troco se for dinheiro
       let troco = 0;
       if (metodo_pagamento === 'DINHEIRO' && valor_pago) {
-        troco = Pagamento.calculateChange(valor_pago, totalVenda);
+        troco = Pagamento.calculateChange(parseFloat(valor_pago), totalVenda);
+        console.log(`🪙 Troco calculado: R$ ${troco.toFixed(2)}`);
       }
 
       // Criar compra
-      const compra = await Compra.create(trx, {
+      console.log('📝 Criando registro de compra...');
+      const compraData = {
         data: new Date(),
         id_loja: currentUser.id_loja,
         id_vendedor: currentUser.id
-      });
+      };
+
+      const compra = await Compra.create(trx, compraData);
+      console.log(`✅ Compra criada com ID: ${compra.id}`);
 
       // Adicionar itens
+      console.log('📦 Adicionando itens à compra...');
       const itemsToInsert = itens.map(item => ({
         quantidade: item.quantidade,
         idmercadoria: item.idmercadoria,
@@ -189,44 +217,71 @@ export const saleController = {
       }));
       
       await ItemMercadoria.createMultiple(trx, itemsToInsert);
+      console.log(`✅ ${itemsToInsert.length} itens adicionados`);
 
+      // 🆕 CORREÇÃO: Preparar dados de pagamento SEM a coluna valor_pago
       const paymentData = {
         data: new Date(),
         valor: totalVenda,
         metodo_pagamento: metodo_pagamento,
         status: 'APROVADO',
         troco: troco,
-        observacao: observacao,
+        observacao: observacao || `Venda rápida - ${metodo_pagamento}`,
         idcompra: compra.id
       };
 
-      if (metodo_pagamento === 'DINHEIRO') {
-        paymentData.valor_pago = valor_pago;
+      // 🆕 CORREÇÃO: Para dinheiro, incluir informação do valor pago na observação
+      if (metodo_pagamento === 'DINHEIRO' && valor_pago) {
+        paymentData.observacao = `Venda em dinheiro - Valor pago: R$ ${parseFloat(valor_pago).toFixed(2)} - Troco: R$ ${troco.toFixed(2)}${observacao ? ' - ' + observacao : ''}`;
       }
 
+      console.log('💳 Criando registro de pagamento...', paymentData);
       await Pagamento.create(trx, paymentData);
+      console.log('✅ Pagamento registrado com sucesso');
 
+      // Commit da transação
       await trx.commit();
+      console.log('✅ Transação concluída com sucesso');
 
+      // Buscar dados completos para retornar
       const completeSale = await Compra.findById(req.db, compra.id, currentUser);
       const items = await ItemMercadoria.findBySaleId(req.db, compra.id);
       const payments = await Pagamento.findBySaleId(req.db, compra.id);
 
-      res.status(201).json({
+      // 🆕 CORREÇÃO: Incluir informações de pagamento no response
+      const responseData = {
         message: 'Venda registrada com sucesso!',
         venda: {
           ...completeSale,
           itens: items,
           pagamentos: payments,
           total_venda: totalVenda,
-          troco: troco
+          troco: troco,
+          // 🆕 Incluir informações de pagamento para dinheiro
+          ...(metodo_pagamento === 'DINHEIRO' && {
+            valor_pago: parseFloat(valor_pago),
+            metodo_pagamento: metodo_pagamento
+          })
         }
-      });
+      };
+
+      res.status(201).json(responseData);
       
     } catch (error) {
       await trx.rollback();
-      console.error('Erro ao registrar venda rápida:', error);
-      res.status(500).json({ error: error.message });
+      console.error('❌ Erro ao registrar venda rápida:', error);
+      
+      // 🆕 CORREÇÃO: Mensagem de erro mais amigável
+      let errorMessage = error.message;
+      
+      if (error.message.includes('valor_pago') && error.message.includes('does not exist')) {
+        errorMessage = 'Erro de configuração do banco de dados: coluna "valor_pago" não existe na tabela pagamento. Use a observação para registrar valores em dinheiro.';
+      }
+      
+      res.status(500).json({ 
+        error: 'Erro ao registrar venda',
+        details: errorMessage
+      });
     }
   },
 

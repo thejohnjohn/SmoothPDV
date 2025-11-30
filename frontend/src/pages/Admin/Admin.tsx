@@ -170,9 +170,9 @@ export const Admin: React.FC = () => {
   };
 
   const tabs = [
-    { id: 'lojas' as ActiveTab, label: '🏢 Lojas', icon: '🏢' },
-    { id: 'gerentes' as ActiveTab, label: '👔 Gerentes', icon: '👔' },
-    { id: 'vendedores' as ActiveTab, label: '👤 Vendedores', icon: '👤' },
+    { id: 'lojas' as ActiveTab, label: 'Lojas', icon: '🏢' },
+    { id: 'gerentes' as ActiveTab, label: 'Gerentes', icon: '👔' },
+    { id: 'vendedores' as ActiveTab, label: 'Vendedores', icon: '👤' },
   ];
 
   // Estado de loading geral

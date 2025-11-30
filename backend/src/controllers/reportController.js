@@ -111,65 +111,67 @@ export const reportController = {
     }
   },
 
-  // 🆕 GERAR NOTA FISCAL (Simulação)
-  async generateInvoice(req, res) {
-    try {
-      const currentUser = req.user;
-      const { sale_id } = req.body;
+  // No reportController.js - ATUALIZAR o método generateInvoice
 
-      // Buscar venda específica
-      const sale = await req.db('compra as c')
-        .leftJoin('loja', 'c.id_loja', 'loja.id')
-        .leftJoin('usuario as vendedor', 'c.id_vendedor', 'vendedor.id')
-        .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
-        .where('c.id', sale_id)
-        .where('c.id_vendedor', currentUser.id) // Apenas suas vendas
-        .select(
-          'c.*',
-          'loja.nome as loja_nome',
-          'loja.endereco as loja_endereco',
-          'loja.cnpj as loja_cnpj',
-          'vendedor.nome as vendedor_nome',
-          'p.valor as total_venda',
-          'p.metodo_pagamento'
-        )
-        .first();
+async generateInvoice(req, res) {
+  try {
+    const currentUser = req.user;
+    const { sale_id } = req.body;
 
-      if (!sale) {
-        return res.status(404).json({ error: 'Venda não encontrada ou acesso negado' });
-      }
+    console.log(`📋 Iniciando geração de nota fiscal para venda: ${sale_id}`);
 
-      // Buscar itens da venda
-      const items = await req.db('item_mercadoria as im')
-        .leftJoin('mercadoria as m', 'im.idmercadoria', 'm.id')
-        .where('im.idcompra', sale_id)
-        .select(
-          'im.quantidade',
-          'm.descricao',
-          'm.preco',
-          req.db.raw('(im.quantidade * m.preco) as subtotal')
-        );
+    // Buscar venda específica
+    const sale = await req.db('compra as c')
+      .leftJoin('loja', 'c.id_loja', 'loja.id')
+      .leftJoin('usuario as vendedor', 'c.id_vendedor', 'vendedor.id')
+      .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
+      .where('c.id', sale_id)
+      .where('c.id_vendedor', currentUser.id)
+      .select(
+        'c.*',
+        'loja.nome as loja_nome',
+        'loja.endereco as loja_endereco',
+        'loja.telefone as loja_telefone',
+        'loja.cnpj as loja_cnpj',
+        'loja.email as loja_email',
+        'vendedor.nome as vendedor_nome',
+        'p.valor as total_venda',
+        'p.metodo_pagamento',
+        'p.data as data_pagamento',
+        'p.troco'
+      )
+      .first();
 
-      // Simular geração de nota fiscal
-      const invoiceData = {
-        numero_nota: `NF${Date.now()}`,
-        data_emissao: new Date().toISOString().split('T')[0],
-        venda: sale,
-        itens: items,
-        total_venda: sale.total_venda
-      };
-
-      // Configurar headers para download
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="nota-fiscal-${sale_id}.pdf"`);
-
-      // Simular PDF da nota fiscal (em produção, usar biblioteca PDF)
-      const pdfContent = `NOTA FISCAL\nNúmero: ${invoiceData.numero_nota}\n...`;
-      res.send(Buffer.from(pdfContent));
-
-    } catch (error) {
-      console.error('Erro ao gerar nota fiscal:', error);
-      res.status(500).json({ error: 'Erro ao gerar nota fiscal' });
+    if (!sale) {
+      return res.status(404).json({ error: 'Venda não encontrada ou acesso negado' });
     }
+
+    // Buscar itens da venda
+    const items = await req.db('item_mercadoria as im')
+      .leftJoin('mercadoria as m', 'im.idmercadoria', 'm.id')
+      .where('im.idcompra', sale_id)
+      .select(
+        'im.quantidade',
+        'm.descricao',
+        'm.preco',
+        req.db.raw('(im.quantidade * m.preco) as subtotal')
+      );
+
+    // 🆕 USAR O MÉTODO PÚBLICO do pdfController
+    req.body = {
+      sale: sale,
+      items: items,
+      user: currentUser
+    };
+
+    return pdfController.generateInvoicePDF(req, res);
+
+  } catch (error) {
+    console.error('❌ Erro ao gerar nota fiscal:', error);
+    res.status(500).json({ 
+      error: 'Erro ao gerar nota fiscal',
+      details: error.message 
+    });
   }
+}
 };
