@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import type { Vendedor, Loja } from '../../../../types/admin';
+import type { Vendedor, VendedorCreateData } from '../../../../types/admin';
 
 interface VendedorFormProps {
   vendedor?: Vendedor | null;
-  lojas: Loja[];
-  onSubmit: (data: Omit<Vendedor, 'id' | 'criado_em'>) => Promise<void>;
+  lojas: any[];
+  onSubmit: (data: VendedorCreateData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
 }
@@ -16,20 +16,23 @@ export const VendedorForm: React.FC<VendedorFormProps> = ({
   onCancel,
   loading = false
 }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<VendedorCreateData>({
     nome: '',
     email: '',
+    senha: '',
     loja_id: '',
-    status: 'ativo' as 'ativo' | 'inativo'
+    status: 'ativo'
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (vendedor) {
       setFormData({
         nome: vendedor.nome,
         email: vendedor.email,
+        senha: '', // Senha em branco para edição
         loja_id: vendedor.loja_id.toString(),
         status: vendedor.status
       });
@@ -49,6 +52,16 @@ export const VendedorForm: React.FC<VendedorFormProps> = ({
       newErrors.email = 'E-mail inválido';
     }
 
+    // 🆕 CORREÇÃO: Validar senha apenas para novo cadastro
+    if (!vendedor) {
+      if (!formData.senha) {
+        newErrors.senha = 'Senha é obrigatória';
+      } else if (formData.senha.length < 6) {
+        newErrors.senha = 'Senha deve ter pelo menos 6 caracteres';
+      }
+    }
+
+    // 🆕 CORREÇÃO: Validar loja - deve ser obrigatória
     if (!formData.loja_id) {
       newErrors.loja_id = 'Loja é obrigatória';
     }
@@ -64,21 +77,28 @@ export const VendedorForm: React.FC<VendedorFormProps> = ({
       return;
     }
 
-    await onSubmit({
-      ...formData,
-      loja_id: parseInt(formData.loja_id)
-    });
+    // 🆕 CORREÇÃO: Preparar dados no formato EXATO que o backend espera
+    const dataToSubmit: VendedorCreateData = {
+      nome: formData.nome,
+      email: formData.email,
+      senha: formData.senha,
+      id_loja: parseInt(formData.loja_id) // 🆕 CORREÇÃO: Usar id_loja em vez de loja_id
+    };
+
+    console.log('📤 Enviando dados do vendedor:', dataToSubmit);
+
+    await onSubmit(dataToSubmit);
   };
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Limpa erro do campo quando usuário começa a digitar
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
-  const lojasAtivas = lojas.filter(loja => loja.status === 'ativo');
+  // 🆕 CORREÇÃO: Filtrar apenas lojas ativas
+  const lojasAtivas = lojas.filter(loja => loja.status === 'ativo' || loja.ativo === true);
 
   return (
     <div className="bg-white rounded-xl border border-black-light p-6">
@@ -117,7 +137,7 @@ export const VendedorForm: React.FC<VendedorFormProps> = ({
             className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
               errors.email ? 'border-red-500' : 'border-black-light'
             }`}
-            placeholder="email@exemplo.com"
+            placeholder="vendedor@loja.com"
             required
           />
           {errors.email && (
@@ -125,6 +145,41 @@ export const VendedorForm: React.FC<VendedorFormProps> = ({
           )}
         </div>
 
+        {/* Campo de Senha */}
+        <div>
+          <label className="block text-sm font-medium text-black mb-2">
+            {vendedor ? 'Nova Senha (opcional)' : 'Senha *'}
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={formData.senha}
+              onChange={(e) => handleChange('senha', e.target.value)}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent pr-10 ${
+                errors.senha ? 'border-red-500' : 'border-black-light'
+              }`}
+              placeholder={vendedor ? 'Deixe em branco para manter atual' : 'Digite a senha'}
+              required={!vendedor}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              {showPassword ? '🙈' : '👁️'}
+            </button>
+          </div>
+          {errors.senha && (
+            <p className="text-red-500 text-sm mt-1">{errors.senha}</p>
+          )}
+          {vendedor && (
+            <p className="text-gray-500 text-xs mt-1">
+              Preencha apenas se desejar alterar a senha
+            </p>
+          )}
+        </div>
+
+        {/* 🆕 CORREÇÃO: Campo Loja - obrigatório e apenas lojas ativas */}
         <div>
           <label className="block text-sm font-medium text-black mb-2">
             Loja *
@@ -140,7 +195,7 @@ export const VendedorForm: React.FC<VendedorFormProps> = ({
             <option value="">Selecione uma loja</option>
             {lojasAtivas.map(loja => (
               <option key={loja.id} value={loja.id}>
-                {loja.nome}
+                {loja.nome} {loja.status && `(${loja.status})`}
               </option>
             ))}
           </select>
@@ -149,7 +204,7 @@ export const VendedorForm: React.FC<VendedorFormProps> = ({
           )}
           {lojasAtivas.length === 0 && (
             <p className="text-orange-500 text-sm mt-1">
-              Nenhuma loja ativa disponível. Cadastre uma loja primeiro.
+              ⚠️ Nenhuma loja ativa disponível. É necessário cadastrar uma loja ativa primeiro.
             </p>
           )}
         </div>
@@ -176,8 +231,15 @@ export const VendedorForm: React.FC<VendedorFormProps> = ({
                 Informações importantes
               </p>
               <p className="text-blue-600 text-sm mt-1">
-                O vendedor receberá um e-mail com instruções para acessar o sistema.
-                Certifique-se de que o e-mail está correto.
+                {vendedor 
+                  ? 'Para alterar a senha, preencha o campo "Nova Senha". Deixe em branco para manter a senha atual.'
+                  : 'O vendedor receberá um e-mail com instruções para acessar o sistema. Certifique-se de que o e-mail está correto.'
+                }
+              </p>
+              <p className="text-blue-600 text-sm mt-1">
+                • Loja é obrigatória para vendedores
+                <br/>
+                • Apenas lojas ativas são exibidas
               </p>
             </div>
           </div>

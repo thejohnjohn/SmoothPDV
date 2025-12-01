@@ -13,7 +13,6 @@ export const saleService = {
   },
 
   async create(data: CreateSaleData): Promise<Sale> {
-    // Garantir que o pagamento tenha método
     const saleData = {
       ...data,
       pagamento: {
@@ -24,6 +23,27 @@ export const saleService = {
     };
 
     const response = await api.post('/sales', saleData);
+    return response.data;
+  },
+
+  // ===== MÉTODOS ESPECÍFICOS PARA VENDEDORES =====
+  async getMySales(): Promise<Sale[]> {
+    const response = await api.get('/seller/sales');
+    return response.data;
+  },
+
+  async getMySaleById(id: number): Promise<Sale> {
+    const response = await api.get(`/seller/sales/${id}`);
+    return response.data;
+  },
+
+  async createQuickSale(data: any): Promise<Sale> {
+    const response = await api.post('/seller/sales/quick', data);
+    return response.data;
+  },
+
+  async getMyStats(): Promise<any> {
+    const response = await api.get('/seller/stats');
     return response.data;
   }
 };

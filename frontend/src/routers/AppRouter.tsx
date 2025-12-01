@@ -11,6 +11,8 @@ import { Sales } from '../pages/Sales/Sales';
 import { PDV } from '../pages/PDV/PDV';
 import { Admin } from '../pages/Admin/Admin';
 import { Gerente } from '../pages/Gerente/Gerente';
+import { VendedoresGerente } from '../pages/Gerente/VendedoresGerente/VendedoresGerente';
+import { ProdutosGerente } from '../pages/Gerente/ProdutosGerente/ProdutosGerente'; // NOVA PÁGINA
 
 export const AppRouter: React.FC = () => {
   const { user, loading } = useAuth();
@@ -23,7 +25,6 @@ export const AppRouter: React.FC = () => {
     );
   }
 
-  // Redirecionamento baseado no tipo de usuário
   const getDefaultRoute = () => {
     if (!user) return '/login';
     
@@ -60,7 +61,11 @@ export const AppRouter: React.FC = () => {
         
         {/* Rotas específicas por tipo de usuário */}
         <Route path="admin" element={<Admin />} />
+        
+        {/* 🆕 ROTAS DO GERENTE */}
         <Route path="gerente" element={<Gerente />} />
+        <Route path="gerente/vendedores" element={<VendedoresGerente />} />
+        <Route path="gerente/produtos" element={<ProdutosGerente />} />
       </Route>
 
       {/* 404 */}

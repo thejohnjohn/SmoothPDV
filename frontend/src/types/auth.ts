@@ -1,4 +1,5 @@
 export interface User {
+  id_loja: number | undefined;
   id: number;
   nome: string;
   email: string;

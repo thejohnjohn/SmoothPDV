@@ -17,11 +17,10 @@ export const productService = {
     return response.data;
   },
 
-  // NOVO: Buscar categorias únicas
   async getCategories(): Promise<string[]> {
     const products = await this.getAll();
     const categories = [...new Set(products.map(p => p.categoria).filter(Boolean))] as string[];
-    return ['all', ...categories]; // 'all' sempre primeiro
+    return ['all', ...categories];
   },
 
   async update(id: number, data: Partial<ProductFormData>): Promise<Product> {
@@ -31,5 +30,16 @@ export const productService = {
 
   async delete(id: number): Promise<void> {
     await api.delete(`/products/${id}`);
+  },
+
+  // ===== MÉTODOS ESPECÍFICOS PARA GERENTES =====
+  async getStoreProducts(): Promise<Product[]> {
+    const response = await api.get('/store/products');
+    return response.data;
+  },
+
+  async getStoreProductsStats(): Promise<any> {
+    const response = await api.get('/store/products/stats');
+    return response.data;
   }
 };

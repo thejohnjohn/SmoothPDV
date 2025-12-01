@@ -25,5 +25,25 @@ export const reportService = {
   async sendEmail(data: ReportData & { recipientEmail: string; message?: string }): Promise<any> {
     const response = await api.post('/reports/email', data);
     return response.data;
+  },
+
+  // ===== MÉTODOS ESPECÍFICOS PARA VENDEDORES =====
+  async generateSellerPDF(data: any): Promise<Blob> {
+    const response = await api.post('/seller/reports/pdf', data, {
+      responseType: 'blob'
+    });
+    return response.data;
+  },
+
+  async sendSellerEmail(data: any): Promise<any> {
+    const response = await api.post('/seller/reports/email', data);
+    return response.data;
+  },
+
+  async generateInvoice(data: any): Promise<Blob> {
+    const response = await api.post('/seller/reports/invoice', data, {
+      responseType: 'blob'
+    });
+    return response.data;
   }
 };

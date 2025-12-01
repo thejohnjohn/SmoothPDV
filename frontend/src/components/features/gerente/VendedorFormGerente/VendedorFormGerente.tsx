@@ -1,26 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import type { Gerente, GerenteCreateData } from '../../../../types/admin';
+import type { Vendedor, VendedorCreateData } from '../../../../types/admin';
+import { useAuth } from '../../../../hooks/useAuth';
 
-interface GerenteFormProps {
-  gerente?: Gerente | null;
-  lojas: any[];
-  onSubmit: (data: GerenteCreateData) => Promise<void>;
+interface VendedorFormGerenteProps {
+  vendedor?: Vendedor | null;
+  onSubmit: (data: VendedorCreateData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
 }
 
-export const GerenteForm: React.FC<GerenteFormProps> = ({
-  gerente,
-  lojas,
+export const VendedorFormGerente: React.FC<VendedorFormGerenteProps> = ({
+  vendedor,
   onSubmit,
   onCancel,
   loading = false
 }) => {
-  const [formData, setFormData] = useState<GerenteCreateData>({
+  const { user } = useAuth();
+  const [formData, setFormData] = useState<VendedorCreateData>({
     nome: '',
     email: '',
-    senha: '', // 🆕 NOVO campo
-    loja_id: 0,
+    senha: '',
     status: 'ativo'
   });
 
@@ -28,22 +27,21 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (gerente) {
+    if (vendedor) {
       setFormData({
-        nome: gerente.nome,
-        email: gerente.email,
-        senha: '', // 🆕 Senha em branco para edição (não preencher por segurança)
-        loja_id: gerente.loja_id || undefined,
-        status: gerente.status
+        nome: vendedor.nome,
+        email: vendedor.email,
+        senha: '', // Senha em branco para edição
+        status: vendedor.status
       });
     }
-  }, [gerente]);
+  }, [vendedor]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.nome.trim()) {
-      newErrors.nome = 'Nome completo é obrigatório';
+      newErrors.nome = 'Nome é obrigatório';
     }
 
     if (!formData.email.trim()) {
@@ -52,11 +50,13 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
       newErrors.email = 'E-mail inválido';
     }
 
-    // 🆕 VALIDAÇÃO DE SENHA
-    if (!gerente && !formData.senha) {
-      newErrors.senha = 'Senha é obrigatória para novo cadastro';
-    } else if (formData.senha && formData.senha.length < 6) {
-      newErrors.senha = 'Senha deve ter pelo menos 6 caracteres';
+    // Validar senha apenas para novo cadastro
+    if (!vendedor) {
+      if (!formData.senha) {
+        newErrors.senha = 'Senha é obrigatória';
+      } else if (formData.senha.length < 6) {
+        newErrors.senha = 'Senha deve ter pelo menos 6 caracteres';
+      }
     }
 
     setErrors(newErrors);
@@ -70,14 +70,18 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
       return;
     }
 
-    // 🆕 PREPARAR DADOS PARA ENVIO
-    const dataToSubmit: GerenteCreateData = {
-      nome: formData.nome,
-      email: formData.email,
-      senha: formData.senha,
-      loja_id: formData.loja_id ? formData.loja_id : undefined,
-      status: formData.status
+    // 🆕 CORREÇÃO: Sempre incluir a loja do gerente logado
+    const dataToSubmit: VendedorCreateData = {
+      ...formData,
+      id_loja: user?.id_loja // 🆕 FORÇAR loja do gerente
     };
+
+    // Para edição, remover senha se estiver vazia
+    if (vendedor && !formData.senha) {
+      delete dataToSubmit.senha;
+    }
+
+    console.log('💾 [GERENTE] Enviando vendedor para loja:', dataToSubmit.id_loja);
 
     await onSubmit(dataToSubmit);
   };
@@ -92,8 +96,23 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
   return (
     <div className="bg-white rounded-xl border border-black-light p-6">
       <h3 className="text-xl font-bold text-black mb-4">
-        {gerente ? '✏️ Editar Gerente' : '👔 Novo Gerente'}
+        {vendedor ? '✏️ Editar Vendedor' : '👤 Novo Vendedor da Loja'}
       </h3>
+      
+      {/* 🆕 INFO DA LOJA */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <div className="flex items-center gap-3">
+          <span className="text-blue-500 text-lg">🏪</span>
+          <div>
+            <p className="text-blue-800 font-medium text-sm">
+              Loja: <span className="font-bold">{user?.loja_nome || 'Minha Loja'}</span>
+            </p>
+            <p className="text-blue-600 text-xs mt-1">
+              ID da Loja: {user?.id_loja}
+            </p>
+          </div>
+        </div>
+      </div>
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -107,7 +126,7 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
             className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
               errors.nome ? 'border-red-500' : 'border-black-light'
             }`}
-            placeholder="Digite o nome completo"
+            placeholder="Digite o nome completo do vendedor"
             required
           />
           {errors.nome && (
@@ -126,7 +145,7 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
             className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
               errors.email ? 'border-red-500' : 'border-black-light'
             }`}
-            placeholder="email@empresa.com"
+            placeholder="vendedor@loja.com"
             required
           />
           {errors.email && (
@@ -134,10 +153,10 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
           )}
         </div>
 
-        {/* 🆕 CAMPO DE SENHA */}
+        {/* Campo de Senha */}
         <div>
           <label className="block text-sm font-medium text-black mb-2">
-            {gerente ? 'Nova Senha (opcional)' : 'Senha *'}
+            {vendedor ? 'Nova Senha (opcional)' : 'Senha *'}
           </label>
           <div className="relative">
             <input
@@ -147,8 +166,8 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
               className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent pr-10 ${
                 errors.senha ? 'border-red-500' : 'border-black-light'
               }`}
-              placeholder={gerente ? 'Deixe em branco para manter atual' : 'Digite a senha'}
-              required={!gerente}
+              placeholder={vendedor ? 'Deixe em branco para manter atual' : 'Digite a senha'}
+              required={!vendedor}
             />
             <button
               type="button"
@@ -161,29 +180,11 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
           {errors.senha && (
             <p className="text-red-500 text-sm mt-1">{errors.senha}</p>
           )}
-          {gerente && (
+          {vendedor && (
             <p className="text-gray-500 text-xs mt-1">
-              Preencha apenas se desejar alterar a senha
+              Preencha apenas se desejar alterar a senha. A senha atual será mantida se deixar em branco.
             </p>
           )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            Loja (Opcional)
-          </label>
-          <select
-            value={formData.loja_id}
-            onChange={(e) => handleChange('loja_id', e.target.value)}
-            className="w-full px-4 py-2 border border-black-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-          >
-            <option value="">Selecione uma loja</option>
-            {lojas.map(loja => (
-              <option key={loja.id} value={loja.id}>
-                {loja.nome}
-              </option>
-            ))}
-          </select>
         </div>
 
         <div>
@@ -200,18 +201,15 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
           </select>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
           <div className="flex items-start gap-3">
-            <span className="text-blue-500 text-lg">💡</span>
+            <span className="text-green-500 text-lg">ℹ️</span>
             <div>
-              <p className="text-blue-800 font-medium text-sm">
-                Informações importantes
+              <p className="text-green-800 font-medium text-sm">
+                Vendedor será cadastrado na SUA loja
               </p>
-              <p className="text-blue-600 text-sm mt-1">
-                {gerente 
-                  ? 'Para alterar a senha, preencha o campo "Nova Senha". Deixe em branco para manter a senha atual.'
-                  : 'O gerente receberá um e-mail com instruções para acessar o sistema. Certifique-se de que o e-mail está correto.'
-                }
+              <p className="text-green-600 text-sm mt-1">
+                Loja: <strong>{user?.loja_nome || 'Minha Loja'}</strong> (ID: {user?.id_loja})
               </p>
             </div>
           </div>
@@ -223,7 +221,7 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
             disabled={loading}
             className="flex-1 bg-primary hover:bg-primary-hover text-white py-3 rounded-lg font-bold transition-all duration-200 disabled:opacity-50"
           >
-            {loading ? 'Salvando...' : (gerente ? 'Atualizar' : 'Cadastrar')}
+            {loading ? 'Salvando...' : (vendedor ? 'Atualizar Vendedor' : 'Cadastrar Vendedor')}
           </button>
           <button
             type="button"

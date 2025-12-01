@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Loja, Gerente, Vendedor } from '../types/admin';
+import type { Loja, Gerente, Vendedor, VendedorCreateData } from '../types/admin';
 
 export const adminService = {
   // ===== LOJAS =====
@@ -28,23 +28,42 @@ export const adminService = {
   },
 
   async updateLojaStatus(id: number, status: 'ativo' | 'inativo'): Promise<Loja> {
-    const response = await api.patch(`/stores/${id}/status`, { status });
+    const response = await api.patch(`/stores/${id}/status`, { ativo: status === 'ativo' });
     return response.data;
   },
 
-  // ===== GERENTES ===== (MANTIDO PARA COMPATIBILIDADE - usar managerService para novas implementações)
+  // ===== GERENTES ===== (CORRIGIDO)
   async getGerentes(): Promise<Gerente[]> {
     const response = await api.get('/managers');
     return response.data;
   },
 
-  async createGerente(gerente: Omit<Gerente, 'id' | 'criado_em'>): Promise<Gerente> {
-    const response = await api.post('/managers', gerente);
+  async createGerente(gerente: Omit<Gerente, 'id' | 'criado_em'> & { senha: string }): Promise<Gerente> {
+    // 🆕 CORREÇÃO: Converter para o formato esperado pelo backend
+    const gerenteData = {
+      nome: gerente.nome,
+      email: gerente.email,
+      senha: gerente.senha, // 🆕 Campo obrigatório
+      id_loja: gerente.loja_id // 🆕 Corrigir nome do campo
+    };
+
+    console.log('📤 Enviando dados do gerente para o backend:', gerenteData);
+
+    const response = await api.post('/managers', gerenteData);
     return response.data;
   },
 
   async updateGerente(id: number, gerente: Partial<Gerente>): Promise<Gerente> {
-    const response = await api.put(`/managers/${id}`, gerente);
+    // 🆕 CORREÇÃO: Converter para o formato esperado pelo backend
+    const gerenteData: any = {};
+    
+    if (gerente.nome) gerenteData.nome = gerente.nome;
+    if (gerente.email) gerenteData.email = gerente.email;
+    if (gerente.loja_id) gerenteData.id_loja = gerente.loja_id;
+
+    console.log('📤 Enviando atualização do gerente:', gerenteData);
+
+    const response = await api.put(`/managers/${id}`, gerenteData);
     return response.data;
   },
 
@@ -52,7 +71,7 @@ export const adminService = {
     await api.delete(`/managers/${id}`);
   },
 
-  // ===== VENDEDORES ===== (MANTIDO PARA COMPATIBILIDADE - usar sellerService para novas implementações)
+  // ===== VENDEDORES =====
   async getVendedores(): Promise<Vendedor[]> {
     const response = await api.get('/sellers');
     return response.data;
@@ -63,15 +82,47 @@ export const adminService = {
     return response.data;
   },
 
-  async createVendedor(vendedor: Omit<Vendedor, 'id' | 'criado_em'>): Promise<Vendedor> {
-    const response = await api.post('/sellers', vendedor);
-    return response.data;
-  },
+  async createVendedor(vendedor: VendedorCreateData): Promise<Vendedor> {
+  // 🆕 CORREÇÃO: Garantir conversão correta para number
+  const idLoja = vendedor.id_loja || parseInt(vendedor.loja_id as string);
+  
+  const vendedorData = {
+    nome: vendedor.nome,
+    email: vendedor.email,
+    senha: vendedor.senha,
+    id_loja: idLoja
+  };
 
-  async updateVendedor(id: number, vendedor: Partial<Vendedor>): Promise<Vendedor> {
-    const response = await api.put(`/sellers/${id}`, vendedor);
-    return response.data;
-  },
+  console.log('📤 Enviando dados do vendedor para o backend:', vendedorData);
+
+  const response = await api.post('/sellers', vendedorData);
+  return response.data;
+},
+
+async updateVendedor(id: number, vendedor: Partial<VendedorCreateData>): Promise<Vendedor> {
+  // 🆕 CORREÇÃO: Converter dados corretamente
+  const vendedorData: any = {};
+  
+  if (vendedor.nome) vendedorData.nome = vendedor.nome;
+  if (vendedor.email) vendedorData.email = vendedor.email;
+  if (vendedor.senha && vendedor.senha.length > 0) {
+    vendedorData.senha = vendedor.senha;
+  }
+  
+  // 🆕 CORREÇÃO: Converter loja_id para id_loja se necessário
+  if (vendedor.id_loja || vendedor.loja_id) {
+    vendedorData.id_loja = vendedor.id_loja || parseInt(vendedor.loja_id as string);
+  }
+
+  if (vendedor.status) {
+    vendedorData.status = vendedor.status;
+  }
+
+  console.log('📤 Enviando atualização do vendedor:', vendedorData);
+
+  const response = await api.put(`/sellers/${id}`, vendedorData);
+  return response.data;
+},
 
   async deleteVendedor(id: number): Promise<void> {
     await api.delete(`/sellers/${id}`);

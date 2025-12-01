@@ -6,33 +6,63 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  const menuItems = [
-    { 
-      path: '/dashboard', 
-      label: 'Dashboard', 
-      icon: '📊'
-    },
-    { 
-      path: user?.tipo === 'ADMIN' ? '/admin' : '/gerente', 
-      label: user?.tipo === 'ADMIN' ? 'Admin' : 'Gerente', 
-      icon: user?.tipo === 'ADMIN' ? '🏢' : '👔'
-    },
-    { 
-      path: '/pdv', 
-      label: 'PDV', 
-      icon: '🛒'
-    },
-    { 
-      path: '/products', 
-      label: 'Produtos', 
-      icon: '📦'
-    },
-    { 
-      path: '/sales', 
-      label: 'Vendas', 
-      icon: '💰'
-    },
-  ];
+  const getMenuItems = () => {
+    const baseItems = [
+      { 
+        path: '/dashboard', 
+        label: 'Dashboard', 
+        icon: '📊'
+      },
+      { 
+        path: '/pdv', 
+        label: 'PDV', 
+        icon: '🛒'
+      },
+      { 
+        path: '/sales', 
+        label: 'Vendas', 
+        icon: '💰'
+      },
+    ];
+
+    // Itens específicos por tipo de usuário
+    if (user?.tipo === 'ADMIN') {
+      return [
+        ...baseItems,
+        { 
+          path: '/admin', 
+          label: 'Admin', 
+          icon: '🏢'
+        },
+      ];
+    }
+
+    if (user?.tipo === 'GERENTE') {
+      return [
+        ...baseItems,
+        { 
+          path: '/gerente', 
+          label: 'Gerente', 
+          icon: '👔'
+        },
+        { 
+          path: '/gerente/produtos', 
+          label: 'Produtos', 
+          icon: '📦'
+        },
+        { 
+          path: '/gerente/vendedores', 
+          label: 'Vendedores', 
+          icon: '👥'
+        },
+      ];
+    }
+
+    // Vendedor - apenas itens base
+    return baseItems;
+  };
+
+  const menuItems = getMenuItems();
 
   return (
     <aside className="w-full h-full bg-white font-nunito">

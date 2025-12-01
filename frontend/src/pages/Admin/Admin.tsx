@@ -6,7 +6,7 @@ import { VendedoresList } from '../../components/features/admin/VendedoresList/V
 import { LojaForm } from '../../components/features/admin/LojaForm/LojaForm';
 import { GerenteForm } from '../../components/features/admin/GerenteForm/GerenteForm';
 import { VendedorForm } from '../../components/features/admin/VendedorForm/VendedorForm';
-import type { Loja, Gerente, Vendedor } from '../../types/admin';
+import type { Loja, Gerente, Vendedor, VendedorCreateData } from '../../types/admin';
 import { adminService } from '../../services/adminService';
 
 type ActiveTab = 'lojas' | 'gerentes' | 'vendedores';
@@ -137,25 +137,49 @@ export const Admin: React.FC = () => {
   };
 
   // Handlers para Vendedores
-  const handleSalvarVendedor = async (data: Omit<Vendedor, 'id' | 'criado_em'>) => {
-    setLoading(true);
-    try {
-      if (selectedItem) {
-        const vendedorAtualizado = await adminService.updateVendedor(selectedItem.id, data);
-        setVendedores(prev => prev.map(v => v.id === selectedItem.id ? vendedorAtualizado : v));
-      } else {
-        const novoVendedor = await adminService.createVendedor(data);
-        setVendedores(prev => [...prev, novoVendedor]);
+  // Handlers para Vendedores
+const handleSalvarVendedor = async (data: VendedorCreateData) => {
+  setLoading(true);
+  try {
+    // 🆕 CORREÇÃO: Garantir que id_loja está presente e é number
+    const vendedorData: VendedorCreateData = {
+      ...data,
+      id_loja: data.id_loja || parseInt(data.loja_id as string)
+    };
+
+    console.log('💾 Salvando vendedor:', vendedorData);
+
+    if (selectedItem) {
+      // 🆕 CORREÇÃO: Passar apenas os dados necessários para update
+      const updateData: Partial<VendedorCreateData> = {
+        nome: vendedorData.nome,
+        email: vendedorData.email,
+        id_loja: vendedorData.id_loja,
+        status: vendedorData.status
+      };
+
+      // 🆕 CORREÇÃO: Incluir senha apenas se foi preenchida
+      if (vendedorData.senha) {
+        updateData.senha = vendedorData.senha;
       }
-      setActiveForm(null);
-      setSelectedItem(null);
-    } catch (error) {
-      console.error('Erro ao salvar vendedor:', error);
-      alert('Erro ao salvar vendedor. Tente novamente.');
-    } finally {
-      setLoading(false);
+
+      const vendedorAtualizado = await adminService.updateVendedor(selectedItem.id, updateData);
+      setVendedores(prev => prev.map(v => v.id === selectedItem.id ? vendedorAtualizado : v));
+    } else {
+      // 🆕 CORREÇÃO: Para criação, enviar todos os dados incluindo senha
+      const novoVendedor = await adminService.createVendedor(vendedorData);
+      setVendedores(prev => [...prev, novoVendedor]);
     }
-  };
+    
+    setActiveForm(null);
+    setSelectedItem(null);
+  } catch (error) {
+    console.error('Erro ao salvar vendedor:', error);
+    alert('Erro ao salvar vendedor. Tente novamente.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDeletarVendedor = async (id: number) => {
     if (window.confirm('Tem certeza que deseja deletar este vendedor?')) {
