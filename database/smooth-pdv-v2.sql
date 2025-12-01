@@ -1,9 +1,6 @@
---
--- PostgreSQL database dump
---
+CREATE DATABASE smooth-pdv;
 
--- Dumped from database version 17.0
--- Dumped by pg_dump version 17.0
+USE smooth-pdv;
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
