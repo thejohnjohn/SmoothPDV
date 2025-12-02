@@ -264,6 +264,34 @@ const handleSalvarVendedor = async (data: VendedorCreateData) => {
 
       {/* Conteúdo Principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Estatísticas (visível apenas quando não há formulário) */}
+        {!activeForm && (
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-xl border border-black-light p-6">
+              <h3 className="text-lg font-bold text-black mb-4">📊 Resumo</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                  <span className="text-black-medium">Total Lojas</span>
+                  <span className="font-bold text-blue-600">{lojas.length}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                  <span className="text-black-medium">Total Gerentes</span>
+                  <span className="font-bold text-green-600">{gerentes.length}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                  <span className="text-black-medium">Total Vendedores</span>
+                  <span className="font-bold text-purple-600">{vendedores.length}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                  <span className="text-black-medium">Lojas Ativas</span>
+                  <span className="font-bold text-orange-600">
+                    {lojas.filter(l => l.status === 'ativo').length}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Lista/Formulário */}
         <div className={`${activeForm ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
           {activeForm === 'loja' ? (
@@ -338,35 +366,6 @@ const handleSalvarVendedor = async (data: VendedorCreateData) => {
             </div>
           )}
         </div>
-
-        {/* Estatísticas (visível apenas quando não há formulário) */}
-        {!activeForm && (
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white rounded-xl border border-black-light p-6">
-              <h3 className="text-lg font-bold text-black mb-4">📊 Resumo</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                  <span className="text-black-medium">Total Lojas</span>
-                  <span className="font-bold text-blue-600">{lojas.length}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                  <span className="text-black-medium">Total Gerentes</span>
-                  <span className="font-bold text-green-600">{gerentes.length}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                  <span className="text-black-medium">Total Vendedores</span>
-                  <span className="font-bold text-purple-600">{vendedores.length}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
-                  <span className="text-black-medium">Lojas Ativas</span>
-                  <span className="font-bold text-orange-600">
-                    {lojas.filter(l => l.status === 'ativo').length}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
