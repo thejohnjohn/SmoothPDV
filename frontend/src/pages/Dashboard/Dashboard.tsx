@@ -7,25 +7,65 @@ import { PDFModal } from '../../components/PDFModal/PDFModal';
 import { EmailModal } from '../../components/EmailModal/EmailModal';
 
 interface DashboardData {
-  metrics: any;
-  salesBySeller?: any[];
-  salesByStore?: any[]; // ✅ CORREÇÃO: Adicionada esta propriedade
-  topProducts?: any[];
-  performanceVendedores?: any[];
-  vendasPorDia?: any[];
   periodo: {
     startDate: string;
     endDate: string;
   };
+  metrics: {
+    total_vendas: string;
+    total_faturado: string;
+    vendedores_ativos: string;
+    total_vendedores: string;
+    total_produtos: string;
+    ticket_medio: string;
+    dias_com_vendas: number;
+    produtos_mais_vendidos_count: number;
+  };
+  vendas_por_dia?: Array<{
+    dia: string;
+    total_vendas: string;
+    total_dia: string;
+  }>;
+  performance_vendedores?: Array<{
+    id: number;
+    vendedor: string;
+    total_vendas: string;
+    total_vendido: string;
+    ticket_medio: string;
+  }>;
+  metodos_pagamento?: Array<{
+    metodo_pagamento: string;
+    total_vendas: string;
+    total_valor: string;
+  }>;
+  produtos_mais_vendidos?: Array<{
+    id: number;
+    descricao: string;
+    preco: string;
+    quantidade_vendida: string;
+    faturamento_total: string;
+  }>;
+  loja?: {
+    id: number;
+    nome: string;
+  };
 }
 
 export const Dashboard: React.FC = () => {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPDFModal, setShowPDFModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   
   const { user } = useAuth();
+
+  // ✅ Verificar se é gerente
+  useEffect(() => {
+    if (user?.tipo !== 'GERENTE') {
+      window.location.href = '/';
+      return;
+    }
+  }, [user]);
 
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -33,27 +73,30 @@ export const Dashboard: React.FC = () => {
   });
 
   useEffect(() => {
-    loadDashboard();
-  }, [dateRange]);
+    if (user?.tipo === 'GERENTE') {
+      loadDashboard();
+    }
+  }, [dateRange, user]);
 
   const loadDashboard = async () => {
     try {
       setLoading(true);
       
-      // ✅ CORREÇÃO: Usar os métodos específicos por tipo de usuário
+      // ✅ Usar os métodos específicos por tipo de usuário
       let dashboardData;
       switch (user?.tipo) {
         case 'ADMIN':
           dashboardData = await dashboardService.getAdminDashboard(dateRange);
           break;
         case 'GERENTE':
+          // ✅ Chamar o dashboard do gerente
           dashboardData = await dashboardService.getGerenteDashboard(dateRange);
           break;
         case 'VENDEDOR':
           dashboardData = await dashboardService.getVendedorDashboard(dateRange);
           break;
         default:
-          dashboardData = await dashboardService.getVendedorDashboard(dateRange);
+          dashboardData = null;
       }
       
       setData(dashboardData);
@@ -65,7 +108,7 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // ✅ CORREÇÃO: Usar reportService para gerar PDF
+  // ✅ Usar reportService para gerar PDF
   const handleGeneratePDF = async (pdfData: any) => {
     try {
       const reportData = {
@@ -95,7 +138,7 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // ✅ CORREÇÃO: Usar emailService para enviar e-mail
+  // ✅ Usar emailService para enviar e-mail
  const handleSendEmail = async (emailData: any) => {
     try {
       const reportPayload = {
@@ -110,7 +153,7 @@ export const Dashboard: React.FC = () => {
 
       console.log('📤 Enviando e-mail com payload:', reportPayload);
       
-      // ✅ CORREÇÃO: Manter reportService.sendEmail() mas com payload correto
+      // ✅ Manter reportService.sendEmail() mas com payload correto
       await reportService.sendEmail(reportPayload);
       alert('✅ E-mail enviado com sucesso!');
     } catch (error) {
@@ -118,6 +161,18 @@ export const Dashboard: React.FC = () => {
       alert('❌ Erro ao enviar e-mail');
     }
   };
+
+  // ✅ Se não for gerente, não mostra nada
+  if (user?.tipo !== 'GERENTE') {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="text-4xl mb-4">🚫</div>
+          <p className="text-gray-600">Acesso restrito apenas para gerentes</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -129,15 +184,16 @@ export const Dashboard: React.FC = () => {
 
   if (!data) return <div>Erro ao carregar dashboard</div>;
 
-  const { metrics, periodo } = data;
+  const { metrics, periodo, loja } = data;
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">📊 Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">📊 Dashboard Gerente</h1>
           <p className="text-gray-600">
+            {loja?.nome && <span className="font-bold">{loja.nome} • </span>}
             Período: {new Date(periodo.startDate).toLocaleDateString()} à {new Date(periodo.endDate).toLocaleDateString()}
           </p>
         </div>
@@ -192,10 +248,82 @@ export const Dashboard: React.FC = () => {
         />
       </div>
 
-      {/* Conteúdo Específico por Tipo de Usuário */}
-      {user?.tipo === 'ADMIN' && <AdminDashboard data={data} />}
-      {user?.tipo === 'GERENTE' && <GerenteDashboard data={data} />}
-      {user?.tipo === 'VENDEDOR' && <VendedorDashboard data={data} />}
+      {/* Grid de Conteúdo */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Performance da Equipe */}
+        <div className="bg-white rounded-lg p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold mb-4">👥 Performance da Equipe</h3>
+          <div className="space-y-3">
+            {data.performance_vendedores?.map((vendedor, index) => (
+              <div key={vendedor.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="font-medium">{vendedor.vendedor}</p>
+                  <p className="text-sm text-gray-600">{vendedor.total_vendas} vendas</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-lg font-bold text-green-600">
+                    R$ {parseFloat(vendedor.total_vendido || 0).toFixed(2)}
+                  </span>
+                  <p className="text-xs text-gray-500">
+                    Ticket: R$ {parseFloat(vendedor.ticket_medio || 0).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Métodos de Pagamento */}
+        <div className="bg-white rounded-lg p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold mb-4">💳 Métodos de Pagamento</h3>
+          <div className="space-y-3">
+            {data.metodos_pagamento?.map((metodo, index) => (
+              <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="font-medium">{getPaymentMethodName(metodo.metodo_pagamento)}</span>
+                <div className="text-right">
+                  <p className="font-semibold">{metodo.total_vendas} vendas</p>
+                  <p className="text-sm text-green-600">R$ {parseFloat(metodo.total_valor || 0).toFixed(2)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Produtos Mais Vendidos */}
+        <div className="bg-white rounded-lg p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold mb-4">📦 Produtos Mais Vendidos</h3>
+          <div className="space-y-3">
+            {data.produtos_mais_vendidos?.map((produto, index) => (
+              <div key={produto.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <div className="flex-1">
+                  <p className="font-medium truncate">{produto.descricao}</p>
+                  <p className="text-sm text-gray-600">R$ {parseFloat(produto.preco || 0).toFixed(2)} cada</p>
+                </div>
+                <div className="text-right ml-4">
+                  <p className="font-semibold">{produto.quantidade_vendida} un</p>
+                  <p className="text-sm text-green-600">R$ {parseFloat(produto.faturamento_total || 0).toFixed(2)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Vendas por Dia */}
+        <div className="bg-white rounded-lg p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold mb-4">📈 Vendas por Dia</h3>
+          <div className="space-y-3">
+            {data.vendas_por_dia?.map((venda, index) => (
+              <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span>{new Date(venda.dia).toLocaleDateString('pt-BR')}</span>
+                <div className="text-right">
+                  <p className="font-semibold">{venda.total_vendas} vendas</p>
+                  <p className="text-sm text-green-600">R$ {parseFloat(venda.total_dia || 0).toFixed(2)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Ações */}
       <div className="bg-white rounded-lg p-6 border border-gray-200">
@@ -241,88 +369,17 @@ export const Dashboard: React.FC = () => {
   );
 };
 
-// Componentes específicos para cada tipo de usuário
-const AdminDashboard: React.FC<{ data: DashboardData }> = ({ data }) => (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    {/* Top Vendedores */}
-    <div className="bg-white rounded-lg p-6 border border-gray-200">
-      <h3 className="text-lg font-semibold mb-4">🏆 Top Vendedores</h3>
-      <div className="space-y-3">
-        {data.salesBySeller?.map((vendedor, index) => (
-          <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-            <span>{vendedor.vendedor}</span>
-            <span className="font-semibold">{vendedor.total_vendas} vendas</span>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    {/* Vendas por Loja */}
-    <div className="bg-white rounded-lg p-6 border border-gray-200">
-      <h3 className="text-lg font-semibold mb-4">🏢 Vendas por Loja</h3>
-      <div className="space-y-3">
-        {data.salesByStore?.map((loja, index) => (
-          <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-            <span className="truncate">{loja.loja}</span>
-            <span className="font-semibold">R$ {parseFloat(loja.total_faturado || 0).toFixed(2)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-const GerenteDashboard: React.FC<{ data: DashboardData }> = ({ data }) => (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    {/* Performance da Equipe */}
-    <div className="bg-white rounded-lg p-6 border border-gray-200">
-      <h3 className="text-lg font-semibold mb-4">👥 Performance da Equipe</h3>
-      <div className="space-y-3">
-        {data.performanceVendedores?.map((vendedor, index) => (
-          <div key={index} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-            <div>
-              <p className="font-medium">{vendedor.vendedor}</p>
-              <p className="text-sm text-gray-600">{vendedor.total_vendas} vendas</p>
-            </div>
-            <span className="text-lg font-bold text-green-600">
-              R$ {parseFloat(vendedor.total_vendido || 0).toFixed(2)}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    {/* Produtos Mais Vendidos */}
-    <div className="bg-white rounded-lg p-6 border border-gray-200">
-      <h3 className="text-lg font-semibold mb-4">📦 Produtos Mais Vendidos</h3>
-      <div className="space-y-3">
-        {data.topProducts?.map((produto, index) => (
-          <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-            <span className="truncate">{produto.descricao}</span>
-            <span className="font-semibold">{produto.quantidade_vendida} un</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-const VendedorDashboard: React.FC<{ data: DashboardData }> = ({ data }) => (
-  <div className="bg-white rounded-lg p-6 border border-gray-200">
-    <h3 className="text-lg font-semibold mb-4">📈 Vendas por Dia</h3>
-    <div className="space-y-3">
-      {data.vendasPorDia?.map((venda, index) => (
-        <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-          <span>{new Date(venda.dia).toLocaleDateString()}</span>
-          <div className="text-right">
-            <p className="font-semibold">{venda.total_vendas} vendas</p>
-            <p className="text-sm text-green-600">R$ {parseFloat(venda.total_dia || 0).toFixed(2)}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
+// ✅ Função para nomear métodos de pagamento
+const getPaymentMethodName = (method: string) => {
+  const methods: { [key: string]: string } = {
+    'DINHEIRO': '💰 Dinheiro',
+    'CARTAO_DEBITO': '💳 Cartão Débito', 
+    'CARTAO_CREDITO': '💳 Cartão Crédito',
+    'PIX': '📱 Pix',
+    'BOLETO': '🏦 Boleto'
+  };
+  return methods[method] || method;
+};
 
 // Componente de Card de Métrica
 const MetricCard: React.FC<{ title: string; value: string | number; icon: string; color: string }> = ({

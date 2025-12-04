@@ -260,23 +260,6 @@ const DashboardGerente: React.FC<{ stats: any }> = ({ stats }) => {
           </div>
         </div>
       </div>
-
-      {/* Dicas do Gerente */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-        <h3 className="text-lg font-bold text-yellow-800 mb-3">💡 Dicas para Gerentes</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-yellow-700">
-          <ul className="space-y-2">
-            <li>• Monitore o desempenho da equipe no Dashboard</li>
-            <li>• Mantenha o catálogo de produtos atualizado</li>
-            <li>• Revise os relatórios de vendas semanalmente</li>
-          </ul>
-          <ul className="space-y-2">
-            <li>• Capacite sua equipe de vendedores</li>
-            <li>• Acompanhe os produtos mais vendidos</li>
-            <li>• Use os relatórios para tomar decisões</li>
-          </ul>
-        </div>
-      </div>
     </div>
   );
 };

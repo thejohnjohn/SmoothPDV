@@ -191,8 +191,15 @@ export const pdfController = {
         });
       }
 
+      // 🆕 Usar método privado com fallback para user
+    const finalUser = user || { 
+      nome: 'Sistema', 
+      tipo: 'SISTEMA',
+      id: 0 
+    };
+
       // Usar método privado
-      return this._generateInvoicePDF(res, sale, items, user);
+      return this._generateInvoicePDF(res, sale, items, finalUser);
 
     } catch (error) {
       console.error('❌ Erro ao gerar nota fiscal:', error);
@@ -252,7 +259,7 @@ export const pdfController = {
          .text(`Método de Pagamento: ${sale.metodo_pagamento || 'Não informado'}`, 50, doc.y + 30);
 
       if (sale.troco > 0) {
-        doc.text(`Troco: R$ ${sale.troco.toFixed(2)}`, 50, doc.y + 45);
+        doc.text(`Troco: R$ ${sale.troco}`, 50, doc.y + 45);
       }
 
       // ===== ITENS DA VENDA =====

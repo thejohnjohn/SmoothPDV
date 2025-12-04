@@ -6,8 +6,8 @@ export class Usuario {
     this.senha = data.senha;
     this.tipo = data.tipo;
     this.id_loja = data.id_loja;
+    this.loja_nome = data.loja_nome;
     this.criado_em = data.criado_em;
-    this.loja_nome = data.loja_nome; // JOIN com loja
   }
 
   // Métodos de permissão
