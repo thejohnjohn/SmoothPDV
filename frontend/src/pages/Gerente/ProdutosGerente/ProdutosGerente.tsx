@@ -137,39 +137,6 @@ export const ProdutosGerente: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Conteúdo Principal */}
-        <div className={`${showForm ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
-          {showForm ? (
-            <ProductFormGerente
-              product={selectedProduct}
-              onSubmit={handleSalvarProduto}
-              onCancel={handleCancelarForm}
-              loading={formLoading}
-            />
-          ) : (
-            <div className="bg-white rounded-xl border border-black-light p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-black">
-                  Catálogo de Produtos ({products.length})
-                </h2>
-                
-                <div className="flex gap-4 text-sm">
-                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
-                    📦 {products.length} produtos
-                  </span>
-                </div>
-              </div>
-
-              <ProductsListGerente
-                products={products}
-                onSelecionarProduto={handleEditarProduto}
-                onDeletarProduto={handleDeletarProduto}
-                loading={loading}
-              />
-            </div>
-          )}
-        </div>
-
         {/* Estatísticas (visível apenas quando não há formulário) */}
         {!showForm && (
           <div className="lg:col-span-1 space-y-6">
@@ -209,38 +176,40 @@ export const ProdutosGerente: React.FC = () => {
                 )}
               </div>
             </div>
-
-            {/* Ações Rápidas */}
-            <div className="bg-white rounded-xl border border-black-light p-6">
-              <h3 className="text-lg font-bold text-black mb-4">⚡ Ações Rápidas</h3>
-              <div className="space-y-3">
-                <button
-                  onClick={handleAdicionarProduto}
-                  className="w-full bg-primary hover:bg-primary-hover text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors text-center"
-                >
-                  + Novo Produto
-                </button>
-                <button
-                  onClick={loadProducts}
-                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium transition-colors text-center"
-                >
-                  🔄 Atualizar Lista
-                </button>
-              </div>
-            </div>
-
-            {/* Dicas */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-              <h3 className="text-lg font-bold text-yellow-800 mb-3">💡 Dicas</h3>
-              <ul className="space-y-2 text-sm text-yellow-700">
-                <li>• Mantenha os preços atualizados</li>
-                <li>• Use categorias para organizar</li>
-                <li>• Produtos com vendas não podem ser excluídos</li>
-                <li>• Monitore os produtos mais vendidos</li>
-              </ul>
-            </div>
           </div>
         )}
+        {/* Conteúdo Principal */}
+        <div className={`${showForm ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
+          {showForm ? (
+            <ProductFormGerente
+              product={selectedProduct}
+              onSubmit={handleSalvarProduto}
+              onCancel={handleCancelarForm}
+              loading={formLoading}
+            />
+          ) : (
+            <div className="bg-white rounded-xl border border-black-light p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-black">
+                  Catálogo de Produtos ({products.length})
+                </h2>
+                
+                <div className="flex gap-4 text-sm">
+                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                    📦 {products.length} produtos
+                  </span>
+                </div>
+              </div>
+
+              <ProductsListGerente
+                products={products}
+                onSelecionarProduto={handleEditarProduto}
+                onDeletarProduto={handleDeletarProduto}
+                loading={loading}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

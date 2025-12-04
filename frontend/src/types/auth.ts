@@ -1,9 +1,10 @@
 export interface User {
-  id_loja: number | undefined;
   id: number;
   nome: string;
   email: string;
   tipo: 'ADMIN' | 'GERENTE' | 'VENDEDOR';
+  id_loja: number | undefined;
+  loja_nome: string | undefined;
   criado_em: string;
 }
 

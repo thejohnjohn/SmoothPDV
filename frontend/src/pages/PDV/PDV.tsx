@@ -4,6 +4,7 @@ import { productService } from '../../services/productService';
 import { saleService } from '../../services/saleService';
 import { useAuth } from '../../hooks/useAuth';
 import { PaymentModal } from '../../components/PaymentModal/PaymentModal';
+import { InvoiceModal } from '../../components/InvoiceModal/InvoiceModal'; // ✅ Importando o modal de nota fiscal
 
 interface CartItem {
   product: Product;
@@ -17,6 +18,9 @@ export const PDV: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false); // ✅ Estado para modal de NF
+  const [lastSaleId, setLastSaleId] = useState<number | null>(null); // ✅ Último ID de venda
+  const [lastSaleData, setLastSaleData] = useState<any>(null); // ✅ Dados da última venda
   const { user } = useAuth();
 
   useEffect(() => {
@@ -108,17 +112,27 @@ export const PDV: React.FC = () => {
         }
       };
 
-      await saleService.create(saleData);
+      // ✅ Criar venda no backend
+      const novaVenda = await saleService.create(saleData);
       
+      // ✅ Salvar dados da venda para nota fiscal
+      setLastSaleId(novaVenda.id);
+      setLastSaleData(novaVenda);
+      
+      // ✅ Limpar carrinho
       setCart([]);
       setShowPaymentModal(false);
       
+      // ✅ Mostrar mensagem de sucesso
       const methodName = getPaymentMethodName(paymentData.metodo_pagamento);
       const changeMessage = paymentData.troco > 0 
         ? ` Troco: R$ ${paymentData.troco.toFixed(2)}` 
         : '';
       
       alert(`🎉 Venda finalizada com sucesso!\n💳 ${methodName}${changeMessage}`);
+      
+      // ✅ Abrir modal de nota fiscal
+      setShowInvoiceModal(true);
       
     } catch (error) {
       console.error('Erro ao finalizar venda:', error);
@@ -422,11 +436,21 @@ export const PDV: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* ✅ Modal de Pagamento */}
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         onConfirm={finalizeSale}
         total={getTotal()}
+      />
+
+      {/* ✅ Modal de Nota Fiscal */}
+      <InvoiceModal
+        isOpen={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        saleId={lastSaleId}
+        saleData={lastSaleData}
       />
     </div>
   );

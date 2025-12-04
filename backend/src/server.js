@@ -11,6 +11,7 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import storeRoutes from './routes/storeRoutes.js';
 import sellerRoutes from './routes/sellerRoutes.js';
+import publicRoutes from './routes/publicRoutes.js';
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/api', publicRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', saleRoutes);
 app.use('/api', productRoutes);

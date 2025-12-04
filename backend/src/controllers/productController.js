@@ -53,6 +53,7 @@ export const productController = {
 
       // Criar produto na loja do gerente
       const productData = {
+        id: Math.floor(Math.random() * 90000) + 10000,
         descricao,
         preco: parseFloat(preco),
         id_loja: currentUser.id_loja, // Gerente só cria na sua loja

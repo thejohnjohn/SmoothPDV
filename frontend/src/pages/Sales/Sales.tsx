@@ -141,8 +141,8 @@ export const Sales: React.FC = () => {
             </div>
             
             <div className="p-6 space-y-4">
-              {/* Conteúdo do modal de detalhes */}
-              <p>Detalhes da venda aqui...</p>
+              {/* Conteúdo do modal de detalhes*/}
+              <p>{selectedSale.id}</p>
             </div>
           </div>
         </div>
