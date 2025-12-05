@@ -1,7 +1,7 @@
 {
     "version": "0.2.0",
-    "configurations": [ 
-                {
+    "configurations": [
+        {
             "type": "node",
             "request": "attach",
             "name": "SmoothPDV API Debugger",

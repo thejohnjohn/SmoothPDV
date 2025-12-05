@@ -144,3 +144,4 @@ frontend-structure-project*
 prompt*
 script.sh
 gen-service.sh
+schema.sql
