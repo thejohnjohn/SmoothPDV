@@ -11,24 +11,24 @@ export const userController = {
 
       // Validações de permissão
       if (tipo === TipoUsuario.ADMIN && !currentUser.isAdmin()) {
-        return res.status(403).json({ 
-          error: 'Apenas administradores podem cadastrar outros administradores.' 
+        return res.status(403).json({
+          error: 'Apenas administradores podem cadastrar outros administradores.'
         });
       }
 
       // Gerentes só podem cadastrar vendedores na SUA loja
       if (tipo === TipoUsuario.VENDEDOR && currentUser.isGerente()) {
         if (id_loja !== currentUser.id_loja) {
-          return res.status(403).json({ 
-            error: 'Gerentes só podem cadastrar vendedores na sua própria loja.' 
+          return res.status(403).json({
+            error: 'Gerentes só podem cadastrar vendedores na sua própria loja.'
           });
         }
       }
 
       // Vendedores não podem cadastrar usuários
       if (currentUser.isVendedor()) {
-        return res.status(403).json({ 
-          error: 'Vendedores não podem cadastrar outros usuários.' 
+        return res.status(403).json({
+          error: 'Vendedores não podem cadastrar outros usuários.'
         });
       }
 
@@ -93,13 +93,13 @@ export const userController = {
       // Gerentes só veem usuários da SUA loja
       if (req.user.isGerente()) {
         query = query.where('usuario.id_loja', req.user.id_loja)
-                     .whereIn('usuario.tipo', [TipoUsuario.VENDEDOR]);
+          .whereIn('usuario.tipo', [TipoUsuario.VENDEDOR]);
       }
 
       // Vendedores não podem ver outros usuários
       if (req.user.isVendedor()) {
-        return res.status(403).json({ 
-          error: 'Vendedores não podem listar usuários.' 
+        return res.status(403).json({
+          error: 'Vendedores não podem listar usuários.'
         });
       }
 
@@ -119,8 +119,8 @@ export const userController = {
 
       // Apenas ADMIN pode criar gerentes (já validado no middleware)
       if (!req.user.isAdmin()) {
-        return res.status(403).json({ 
-          error: 'Apenas administradores podem cadastrar gerentes.' 
+        return res.status(403).json({
+          error: 'Apenas administradores podem cadastrar gerentes.'
         });
       }
 
@@ -172,13 +172,13 @@ export const userController = {
     try {
       // Apenas ADMIN pode listar gerentes
       if (!req.user.isAdmin()) {
-        return res.status(403).json({ 
-          error: 'Apenas administradores podem listar gerentes.' 
+        return res.status(403).json({
+          error: 'Apenas administradores podem listar gerentes.'
         });
       }
 
       const { id_loja } = req.query;
-      
+
       let query = req.db('usuario')
         .leftJoin('loja', 'usuario.id_loja', 'loja.id')
         .select('usuario.*', 'loja.nome as loja_nome')
@@ -203,8 +203,8 @@ export const userController = {
     try {
       // Apenas ADMIN pode ver detalhes de gerentes
       if (!req.user.isAdmin()) {
-        return res.status(403).json({ 
-          error: 'Apenas administradores podem visualizar gerentes.' 
+        return res.status(403).json({
+          error: 'Apenas administradores podem visualizar gerentes.'
         });
       }
 
@@ -231,8 +231,8 @@ export const userController = {
     try {
       // Apenas ADMIN pode atualizar gerentes
       if (!req.user.isAdmin()) {
-        return res.status(403).json({ 
-          error: 'Apenas administradores podem atualizar gerentes.' 
+        return res.status(403).json({
+          error: 'Apenas administradores podem atualizar gerentes.'
         });
       }
 
@@ -255,7 +255,7 @@ export const userController = {
           .where('email', email)
           .whereNot('id', id)
           .first();
-        
+
         if (emailExists) {
           return res.status(400).json({ error: 'Email já está em uso' });
         }
@@ -288,60 +288,100 @@ export const userController = {
     }
   },
 
-  // 🆕 Deletar gerente
   async deleteManager(req, res) {
     try {
-      // Apenas ADMIN pode deletar gerentes
       if (!req.user.isAdmin()) {
-        return res.status(403).json({ 
-          error: 'Apenas administradores podem deletar gerentes.' 
+        return res.status(403).json({
+          error: 'Apenas administradores podem deletar gerentes.'
         });
       }
 
       const { id } = req.params;
 
-      // Verificar se gerente existe
+      // Verificar se gerente existe e não está deletado
       const manager = await req.db('usuario')
         .where('id', id)
         .where('tipo', TipoUsuario.GERENTE)
+        .where('deleted', false)
         .first();
 
       if (!manager) {
         return res.status(404).json({ error: 'Gerente não encontrado' });
       }
 
-      // Verificar se gerente tem vendas ou produtos associados
-      const hasSales = await req.db('compra')
-        .where('id_vendedor', id)
-        .first();
+      // 🆕 SOFT DELETE em vez de delete físico
+      await Usuario.softDelete(req.db, id, req.user.id);
 
-      const hasProducts = await req.db('mercadoria')
-        .where('id_usuario', id)
-        .first();
-
-      if (hasSales || hasProducts) {
-        return res.status(400).json({ 
-          error: 'Não é possível excluir gerente com vendas ou produtos associados.' 
-        });
-      }
-
-      await req.db('usuario').where('id', id).delete();
-
-      res.json({ message: 'Gerente excluído com sucesso' });
+      res.json({
+        message: 'Gerente excluído com sucesso',
+        deleted_at: new Date(),
+        can_restore: true
+      });
 
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   },
-    async createSeller(req, res) {
+
+  async restoreManager(req, res) {
+    try {
+      if (!req.user.isAdmin()) {
+        return res.status(403).json({
+          error: 'Apenas administradores podem restaurar gerentes.'
+        });
+      }
+
+      const { id } = req.params;
+
+      const manager = await req.db('usuario')
+        .where('id', id)
+        .where('tipo', TipoUsuario.GERENTE)
+        .where('deleted', true)
+        .first();
+
+      if (!manager) {
+        return res.status(404).json({ error: 'Gerente deletado não encontrado' });
+      }
+
+      await Usuario.restore(req.db, id, req.user.id);
+
+      res.json({
+        message: 'Gerente restaurado com sucesso',
+        restored_at: new Date()
+      });
+
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  // 🆕 NOVO: Listar gerentes deletados (apenas admin)
+  async getDeletedManagers(req, res) {
+    try {
+      if (!req.user.isAdmin()) {
+        return res.status(403).json({
+          error: 'Apenas administradores podem ver gerentes deletados.'
+        });
+      }
+
+      const managers = await Usuario.findDeleted(req.db, TipoUsuario.GERENTE);
+
+      res.json(managers);
+
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  async createSeller(req, res) {
     try {
       const { nome, email, senha, id_loja } = req.body;
       const currentUser = req.user;
 
       // Validações de permissão por loja
       if (currentUser.isGerente() && id_loja !== currentUser.id_loja) {
-        return res.status(403).json({ 
-          error: 'Gerentes só podem cadastrar vendedores na sua própria loja.' 
+        return res.status(403).json({
+          error: 'Gerentes só podem cadastrar vendedores na sua própria loja.'
         });
       }
 
@@ -430,8 +470,8 @@ export const userController = {
 
       // Validar acesso: GERENTE só pode ver vendedores da sua loja
       if (req.user.isGerente() && seller.id_loja !== req.user.id_loja) {
-        return res.status(403).json({ 
-          error: 'Acesso negado. Você só pode visualizar vendedores da sua loja.' 
+        return res.status(403).json({
+          error: 'Acesso negado. Você só pode visualizar vendedores da sua loja.'
         });
       }
 
@@ -463,14 +503,14 @@ export const userController = {
       if (currentUser.isGerente()) {
         // Gerente só pode editar vendedores da SUA loja
         if (existingSeller.id_loja !== currentUser.id_loja) {
-          return res.status(403).json({ 
-            error: 'Você só pode editar vendedores da sua loja.' 
+          return res.status(403).json({
+            error: 'Você só pode editar vendedores da sua loja.'
           });
         }
         // Gerente não pode transferir vendedor para outra loja
         if (id_loja && id_loja !== currentUser.id_loja) {
-          return res.status(403).json({ 
-            error: 'Gerentes não podem transferir vendedores para outras lojas.' 
+          return res.status(403).json({
+            error: 'Gerentes não podem transferir vendedores para outras lojas.'
           });
         }
       }
@@ -481,7 +521,7 @@ export const userController = {
           .where('email', email)
           .whereNot('id', id)
           .first();
-        
+
         if (emailExists) {
           return res.status(400).json({ error: 'Email já está em uso' });
         }
@@ -535,8 +575,8 @@ export const userController = {
 
       // Validar acesso: GERENTE só pode ver stats de vendedores da sua loja
       if (currentUser.isGerente() && seller.id_loja !== currentUser.id_loja) {
-        return res.status(403).json({ 
-          error: 'Acesso negado aos dados deste vendedor.' 
+        return res.status(403).json({
+          error: 'Acesso negado aos dados deste vendedor.'
         });
       }
 
@@ -566,7 +606,7 @@ export const userController = {
       res.status(500).json({ error: error.message });
     }
   },
-   // 🆕 Estatísticas do vendedor
+  // 🆕 Estatísticas do vendedor
   async getSellerStats(req, res) {
     try {
       const { id } = req.params;
@@ -584,8 +624,8 @@ export const userController = {
 
       // Validar acesso: GERENTE só pode ver stats de vendedores da sua loja
       if (currentUser.isGerente() && seller.id_loja !== currentUser.id_loja) {
-        return res.status(403).json({ 
-          error: 'Acesso negado aos dados deste vendedor.' 
+        return res.status(403).json({
+          error: 'Acesso negado aos dados deste vendedor.'
         });
       }
 
@@ -616,48 +656,34 @@ export const userController = {
     }
   },
 
-  // 🆕 Deletar vendedor
   async deleteSeller(req, res) {
     try {
       const { id } = req.params;
       const currentUser = req.user;
 
-      // Verificar se vendedor existe
       const seller = await req.db('usuario')
         .where('id', id)
         .where('tipo', TipoUsuario.VENDEDOR)
+        .where('deleted', false)
         .first();
 
       if (!seller) {
         return res.status(404).json({ error: 'Vendedor não encontrado' });
       }
 
-      // Validar permissões de loja
       if (currentUser.isGerente() && seller.id_loja !== currentUser.id_loja) {
-        return res.status(403).json({ 
-          error: 'Você só pode excluir vendedores da sua loja.' 
+        return res.status(403).json({
+          error: 'Você só pode excluir vendedores da sua loja.'
         });
       }
 
-      // Verificar se vendedor tem vendas associadas
-      const hasSales = await req.db('compra')
-        .where('id_vendedor', id)
-        .first();
+      await Usuario.softDelete(req.db, id, currentUser.id);
 
-      // Verificar se vendedor tem produtos associados
-      const hasProducts = await req.db('mercadoria')
-        .where('id_usuario', id)
-        .first();
-
-      if (hasSales || hasProducts) {
-        return res.status(400).json({ 
-          error: 'Não é possível excluir vendedor com vendas ou produtos associados.' 
-        });
-      }
-
-      await req.db('usuario').where('id', id).delete();
-
-      res.json({ message: 'Vendedor excluído com sucesso' });
+      res.json({
+        message: 'Vendedor excluído com sucesso',
+        deleted_at: new Date(),
+        can_restore: true
+      });
 
     } catch (error) {
       res.status(500).json({ error: error.message });

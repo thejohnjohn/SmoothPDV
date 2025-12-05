@@ -1,7 +1,9 @@
-// src/controllers/storeController.js - ATUALIZAR COMPLETO
+// src/controllers/storeController.js - ATUALIZADO
+
+import { Loja } from '../entities/Loja.js';
 
 export const storeController = {
-  // 🆕 LISTAR TODAS AS LOJAS (apenas Admin)
+  // 🆕 ATUALIZADO: Listar lojas usando entidade
   async getStores(req, res) {
     try {
       if (!req.user.isAdmin()) {
@@ -10,14 +12,17 @@ export const storeController = {
         });
       }
 
-      const stores = await req.db('loja').select('*').orderBy('nome');
+      const { include_deleted } = req.query;
+      const includeDeleted = include_deleted === 'true';
+      
+      const stores = await Loja.findAll(req.db, includeDeleted);
       res.json(stores);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   },
 
-  // 🆕 BUSCAR LOJA POR ID (apenas Admin)
+  // 🆕 ATUALIZADO: Buscar loja por ID usando entidade
   async getStoreById(req, res) {
     try {
       if (!req.user.isAdmin()) {
@@ -26,7 +31,7 @@ export const storeController = {
         });
       }
 
-      const store = await req.db('loja').where({ id: req.params.id }).first();
+      const store = await Loja.findById(req.db, req.params.id);
       
       if (!store) {
         return res.status(404).json({ error: 'Loja não encontrada' });
@@ -38,7 +43,7 @@ export const storeController = {
     }
   },
 
-  // 🆕 CRIAR LOJA (apenas Admin)
+  // 🆕 ATUALIZADO: Criar loja usando entidade
   async createStore(req, res) {
     try {
       if (!req.user.isAdmin()) {
@@ -49,29 +54,28 @@ export const storeController = {
 
       const { nome, endereco, telefone, email, cnpj } = req.body;
 
-      // Validações básicas
       if (!nome) {
         return res.status(400).json({ error: 'Nome da loja é obrigatório' });
       }
 
-      // Verificar se CNPJ já existe
+      // Validar CNPJ usando entidade
       if (cnpj) {
-        const existingStore = await req.db('loja').where({ cnpj }).first();
-        if (existingStore) {
+        const cnpjIsValid = await Loja.validateCnpj(req.db, cnpj);
+        if (!cnpjIsValid) {
           return res.status(400).json({ error: 'CNPJ já cadastrado' });
         }
       }
 
-      const [{ id }] = await req.db('loja').insert({
+      const storeData = {
         nome,
         endereco,
         telefone,
         email,
         cnpj,
         ativo: true
-      }).returning('id');
-      
-      const store = await req.db('loja').where({ id }).first();
+      };
+
+      const store = await Loja.create(req.db, storeData);
       
       res.status(201).json({
         message: 'Loja criada com sucesso',
@@ -82,7 +86,7 @@ export const storeController = {
     }
   },
 
-  // 🆕 ATUALIZAR LOJA (apenas Admin)
+  // 🆕 ATUALIZADO: Atualizar loja usando entidade
   async updateStore(req, res) {
     try {
       if (!req.user.isAdmin()) {
@@ -95,19 +99,15 @@ export const storeController = {
       const { nome, endereco, telefone, email, cnpj, ativo } = req.body;
 
       // Verificar se loja existe
-      const existingStore = await req.db('loja').where({ id }).first();
+      const existingStore = await Loja.findById(req.db, id);
       if (!existingStore) {
         return res.status(404).json({ error: 'Loja não encontrada' });
       }
 
-      // Verificar se CNPJ já existe (excluindo a própria loja)
+      // Validar CNPJ (excluindo a própria loja)
       if (cnpj && cnpj !== existingStore.cnpj) {
-        const cnpjExists = await req.db('loja')
-          .where({ cnpj })
-          .whereNot('id', id)
-          .first();
-        
-        if (cnpjExists) {
+        const cnpjIsValid = await Loja.validateCnpj(req.db, cnpj, id);
+        if (!cnpjIsValid) {
           return res.status(400).json({ error: 'CNPJ já está em uso' });
         }
       }
@@ -121,10 +121,7 @@ export const storeController = {
       if (cnpj !== undefined) updateData.cnpj = cnpj;
       if (ativo !== undefined) updateData.ativo = ativo;
 
-      await req.db('loja').where({ id }).update(updateData);
-
-      // Buscar loja atualizada
-      const updatedStore = await req.db('loja').where({ id }).first();
+      const updatedStore = await Loja.update(req.db, id, updateData);
 
       res.json({
         message: 'Loja atualizada com sucesso',
@@ -136,7 +133,7 @@ export const storeController = {
     }
   },
 
-  // 🆕 DELETAR LOJA (apenas Admin)
+  // 🆕 ATUALIZADO: Deletar loja usando entidade
   async deleteStore(req, res) {
     try {
       if (!req.user.isAdmin()) {
@@ -147,43 +144,41 @@ export const storeController = {
 
       const { id } = req.params;
 
-      // Verificar se loja existe
-      const store = await req.db('loja').where({ id }).first();
+      // Verificar se loja existe e não está deletada
+      const store = await Loja.findById(req.db, id);
       if (!store) {
         return res.status(404).json({ error: 'Loja não encontrada' });
       }
 
-      // Verificar se loja tem usuários associados
-      const hasUsers = await req.db('usuario')
-        .where('id_loja', id)
-        .first();
-
-      // Verificar se loja tem vendas associadas
-      const hasSales = await req.db('compra')
-        .where('id_loja', id)
-        .first();
-
-      // Verificar se loja tem produtos associados
-      const hasProducts = await req.db('mercadoria')
-        .where('id_loja', id)
-        .first();
+      // 🆕 Verificar se loja tem dependências (opcional)
+      const hasUsers = await Loja.hasUsers(req.db, id);
+      const hasSales = await Loja.hasSales(req.db, id);
+      const hasProducts = await Loja.hasProducts(req.db, id);
 
       if (hasUsers || hasSales || hasProducts) {
-        return res.status(400).json({ 
-          error: 'Não é possível excluir loja com usuários, vendas ou produtos associados.' 
+        return res.status(400).json({
+          error: 'Não é possível excluir loja com usuários, vendas ou produtos associados.',
+          has_users: hasUsers,
+          has_sales: hasSales,
+          has_products: hasProducts
         });
       }
 
-      await req.db('loja').where({ id }).delete();
+      // Soft delete usando entidade
+      await Loja.softDelete(req.db, id, req.user.id);
 
-      res.json({ message: 'Loja excluída com sucesso' });
+      res.json({ 
+        message: 'Loja excluída com sucesso',
+        deleted_at: new Date(),
+        can_restore: true
+      });
 
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   },
 
-  // 🆕 ATIVAR/DESATIVAR LOJA (apenas Admin)
+  // 🆕 ATUALIZADO: Ativar/desativar loja usando entidade
   async toggleStoreStatus(req, res) {
     try {
       if (!req.user.isAdmin()) {
@@ -196,12 +191,12 @@ export const storeController = {
       const { ativo } = req.body;
 
       // Verificar se loja existe
-      const store = await req.db('loja').where({ id }).first();
+      const store = await Loja.findById(req.db, id);
       if (!store) {
         return res.status(404).json({ error: 'Loja não encontrada' });
       }
 
-      await req.db('loja').where({ id }).update({ ativo });
+      await Loja.toggleStatus(req.db, id, ativo);
 
       res.json({
         message: `Loja ${ativo ? 'ativada' : 'desativada'} com sucesso`,
@@ -213,7 +208,47 @@ export const storeController = {
     }
   },
 
-  // ✅ MÉTODO EXISTENTE - Estatísticas da loja (Admin e Gerente da loja)
+  // 🆕 NOVO: Restaurar loja deletada
+  async restoreStore(req, res) {
+    try {
+      if (!req.user.isAdmin()) {
+        return res.status(403).json({ 
+          error: 'Apenas administradores podem restaurar lojas.' 
+        });
+      }
+
+      const { id } = req.params;
+
+      await Loja.safeRestore(req.db, id, req.user.id);
+
+      res.json({ 
+        message: 'Loja restaurada com sucesso',
+        restored_at: new Date()
+      });
+
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  // 🆕 NOVO: Listar lojas deletadas
+  async getDeletedStores(req, res) {
+    try {
+      if (!req.user.isAdmin()) {
+        return res.status(403).json({ 
+          error: 'Apenas administradores podem ver lojas deletadas.' 
+        });
+      }
+
+      const stores = await Loja.findDeleted(req.db);
+      res.json(stores);
+
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  // ✅ ATUALIZADO: Estatísticas da loja usando entidade
   async getStoreStats(req, res) {
     try {
       const { id } = req.params;
@@ -226,19 +261,7 @@ export const storeController = {
         });
       }
 
-      const stats = await req.db('compra as c')
-        .leftJoin('pagamento as p', 'c.id', 'p.idcompra')
-        .where('c.id_loja', id)
-        .select(
-          req.db.raw('COUNT(DISTINCT c.id) as total_vendas'),
-          req.db.raw('COALESCE(SUM(p.valor), 0) as total_faturado'),
-          req.db.raw('COUNT(DISTINCT c.id_vendedor) as total_vendedores'),
-          req.db.raw('(SELECT COUNT(*) FROM mercadoria WHERE id_loja = ?) as total_produtos', [id]),
-          req.db.raw('(SELECT COUNT(*) FROM usuario WHERE id_loja = ? AND tipo = ?) as total_gerentes', [id, 'GERENTE']),
-          req.db.raw('(SELECT COUNT(*) FROM usuario WHERE id_loja = ? AND tipo = ?) as total_vendedores', [id, 'VENDEDOR'])
-        )
-        .first();
-
+      const stats = await Loja.getStats(req.db, id);
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: error.message });
