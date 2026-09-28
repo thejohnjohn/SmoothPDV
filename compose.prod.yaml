@@ -1,0 +1,59 @@
+name: smooth-pdv-prod
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-smooth-pdv}
+      POSTGRES_USER: ${DB_USER:-smooth}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD}
+      LOAD_SEED: "true"
+      LOAD_MOCKS: ${LOAD_MOCKS:-false}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./database/smooth-pdv-v2.sql:/opt/db/schema.sql:ro
+      - ./docker/postgres/seed/loja.sql:/opt/db/seed.sql:ro
+      - ./docker/postgres/init/00-init-db.sh:/docker-entrypoint-initdb.d/00-init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-smooth} -d ${DB_NAME:-smooth-pdv}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      target: production
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-smooth-pdv}
+      DB_USER: ${DB_USER:-smooth}
+      DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET}
+      EMAIL_API_KEY: ${EMAIL_API_KEY:-re_prod_placeholder}
+      MAIL_FROM: "${MAIL_FROM:-SmoothPDV <no-reply@smoothpdv.local>}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+      args:
+        VITE_API_URL: ${PUBLIC_API_URL:-/api}
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
