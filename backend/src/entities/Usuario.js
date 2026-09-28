@@ -99,5 +99,6 @@ export class Usuario extends BaseEntity{
 export const TipoUsuario = {
   ADMIN: 'ADMIN',
   GERENTE: 'GERENTE', 
-  VENDEDOR: 'VENDEDOR'
+  VENDEDOR: 'VENDEDOR',
+  CLIENTE: 'CLIENTE'
 };
