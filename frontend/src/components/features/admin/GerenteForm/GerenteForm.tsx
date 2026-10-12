@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import type { Gerente, GerenteCreateData } from '../../../../types/admin';
+import React, { useState } from 'react';
+import { Briefcase, Eye, EyeOff, Lightbulb, Pencil } from 'lucide-react';
+import type { Gerente, GerenteCreateData, Loja } from '../../../../types/admin';
+import { Button } from '../../../ui/Button/Button';
+import { Card } from '../../../ui/Card/Card';
+import { Input } from '../../../ui/Input/Input';
 
 interface GerenteFormProps {
   gerente?: Gerente | null;
-  lojas: any[];
+  lojas: Loja[];
   onSubmit: (data: GerenteCreateData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -27,7 +31,9 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
+  const [prevGerente, setPrevGerente] = useState(gerente);
+  if (gerente !== prevGerente) {
+    setPrevGerente(gerente);
     if (gerente) {
       setFormData({
         nome: gerente.nome,
@@ -37,7 +43,7 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
         status: gerente.status
       });
     }
-  }, [gerente]);
+  }
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -90,92 +96,82 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-black-light p-6">
-      <h3 className="text-xl font-bold text-black mb-4">
-        {gerente ? '✏️ Editar Gerente' : '👔 Novo Gerente'}
+    <Card>
+      <h3 className="flex items-center gap-2 text-xl font-bold text-ink mb-4">
+        {gerente ? (
+          <>
+            <Pencil className="h-5 w-5" aria-hidden="true" />
+            Editar Gerente
+          </>
+        ) : (
+          <>
+            <Briefcase className="h-5 w-5" aria-hidden="true" />
+            Novo Gerente
+          </>
+        )}
       </h3>
       
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            Nome Completo *
-          </label>
-          <input
-            type="text"
-            value={formData.nome}
-            onChange={(e) => handleChange('nome', e.target.value)}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-              errors.nome ? 'border-red-500' : 'border-black-light'
-            }`}
-            placeholder="Digite o nome completo"
-            required
-          />
-          {errors.nome && (
-            <p className="text-red-500 text-sm mt-1">{errors.nome}</p>
-          )}
-        </div>
+        <Input
+          type="text"
+          label="Nome Completo *"
+          value={formData.nome}
+          onChange={(e) => handleChange('nome', e.target.value)}
+          placeholder="Digite o nome completo"
+          error={errors.nome}
+          required
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            E-mail *
-          </label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleChange('email', e.target.value)}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-              errors.email ? 'border-red-500' : 'border-black-light'
-            }`}
-            placeholder="email@empresa.com"
-            required
-          />
-          {errors.email && (
-            <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-          )}
-        </div>
+        <Input
+          type="email"
+          label="E-mail *"
+          value={formData.email}
+          onChange={(e) => handleChange('email', e.target.value)}
+          placeholder="email@empresa.com"
+          error={errors.email}
+          required
+        />
 
         {/* 🆕 CAMPO DE SENHA */}
         <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            {gerente ? 'Nova Senha (opcional)' : 'Senha *'}
-          </label>
           <div className="relative">
-            <input
+            <Input
               type={showPassword ? 'text' : 'password'}
+              label={gerente ? 'Nova Senha (opcional)' : 'Senha *'}
               value={formData.senha}
               onChange={(e) => handleChange('senha', e.target.value)}
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent pr-10 ${
-                errors.senha ? 'border-red-500' : 'border-black-light'
-              }`}
               placeholder={gerente ? 'Deixe em branco para manter atual' : 'Digite a senha'}
               required={!gerente}
+              error={errors.senha}
+              className="pr-10"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-ink-muted hover:text-ink"
             >
-              {showPassword ? '🙈' : '👁️'}
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Eye className="h-5 w-5" aria-hidden="true" />
+              )}
             </button>
           </div>
-          {errors.senha && (
-            <p className="text-red-500 text-sm mt-1">{errors.senha}</p>
-          )}
           {gerente && (
-            <p className="text-gray-500 text-xs mt-1">
+            <p className="text-ink-muted text-xs mt-1">
               Preencha apenas se desejar alterar a senha
             </p>
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-ink">
             Loja (Opcional)
           </label>
           <select
             value={formData.loja_id}
             onChange={(e) => handleChange('loja_id', e.target.value)}
-            className="w-full px-4 py-2 border border-black-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
           >
             <option value="">Selecione uma loja</option>
             {lojas.map(loja => (
@@ -186,28 +182,28 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-ink">
             Status
           </label>
           <select
             value={formData.status}
             onChange={(e) => handleChange('status', e.target.value as 'ativo' | 'inativo')}
-            className="w-full px-4 py-2 border border-black-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
           >
             <option value="ativo">Ativo</option>
             <option value="inativo">Inativo</option>
           </select>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+        <div className="bg-secondary-50 border border-secondary-100 rounded-lg p-4 mt-4">
           <div className="flex items-start gap-3">
-            <span className="text-blue-500 text-lg">💡</span>
+            <Lightbulb className="h-5 w-5 text-secondary-500" aria-hidden="true" />
             <div>
-              <p className="text-blue-800 font-medium text-sm">
+              <p className="text-secondary-700 font-medium text-sm">
                 Informações importantes
               </p>
-              <p className="text-blue-600 text-sm mt-1">
+              <p className="text-secondary-700 text-sm mt-1">
                 {gerente 
                   ? 'Para alterar a senha, preencha o campo "Nova Senha". Deixe em branco para manter a senha atual.'
                   : 'O gerente receberá um e-mail com instruções para acessar o sistema. Certifique-se de que o e-mail está correto.'
@@ -218,22 +214,23 @@ export const GerenteForm: React.FC<GerenteFormProps> = ({
         </div>
 
         <div className="flex gap-3 pt-4">
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="flex-1 bg-primary hover:bg-primary-hover text-white py-3 rounded-lg font-bold transition-all duration-200 disabled:opacity-50"
+            loading={loading}
+            className="flex-1"
           >
             {loading ? 'Salvando...' : (gerente ? 'Atualizar' : 'Cadastrar')}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
             onClick={onCancel}
-            className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-bold transition-all duration-200"
+            className="flex-1"
           >
             Cancelar
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Card>
   );
 };

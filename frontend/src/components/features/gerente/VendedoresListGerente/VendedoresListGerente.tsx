@@ -1,7 +1,12 @@
 import React from 'react';
+import { CheckCircle2, User, Users, XCircle } from 'lucide-react';
 import type { Vendedor } from '../../../../types/admin';
 import { BotaoAtualizar } from '../../../BotaoAtualizar/BotaoAtualizar';
 import { BotaoDeletar } from '../../../BotaoDeletar/BotaoDeletar';
+import { Badge } from '../../../ui/Badge/Badge';
+import { Card } from '../../../ui/Card/Card';
+import { EmptyState } from '../../../ui/EmptyState/EmptyState';
+import { LoadingState } from '../../../ui/LoadingState/LoadingState';
 
 interface VendedoresListGerenteProps {
   vendedores: Vendedor[];
@@ -19,20 +24,16 @@ export const VendedoresListGerente: React.FC<VendedoresListGerenteProps> = ({
   loading = false
 }) => {
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   if (vendedores.length === 0) {
     return (
-      <div className="text-center py-8 text-black-medium">
-        <div className="text-6xl mb-4">👥</div>
-        <p className="text-lg">Nenhum vendedor na sua loja</p>
-        <p className="text-sm">Adicione vendedores para expandir sua equipe</p>
-      </div>
+      <EmptyState
+        icon={<Users className="h-8 w-8" aria-hidden="true" />}
+        title="Nenhum vendedor na sua loja"
+        description="Adicione vendedores para expandir sua equipe"
+      />
     );
   }
 
@@ -44,38 +45,53 @@ export const VendedoresListGerente: React.FC<VendedoresListGerenteProps> = ({
   return (
     <div className="space-y-4">
       {vendedores.map(vendedor => (
-        <div
+        <Card
           key={vendedor.id}
-          className="flex items-center justify-between p-4 bg-white-medium rounded-lg border border-black-light hover:shadow-md transition-all duration-200"
+          padding="sm"
+          className="flex items-center justify-between hover:shadow-md transition-all duration-200"
         >
           <div className="flex items-center gap-4 flex-1">
-            <div className="w-12 h-12 bg-primary-light rounded-full flex items-center justify-center">
-              <span className="text-lg">👤</span>
+            <div className="w-12 h-12 bg-primary-50 rounded-full flex items-center justify-center">
+              <User className="h-5 w-5" aria-hidden="true" />
             </div>
             
             <div className="flex-1">
               <div className="flex items-center gap-3">
-                <h4 className="font-bold text-black text-lg">{vendedor.nome}</h4>
+                <h4 className="font-bold text-ink text-lg">{vendedor.nome}</h4>
                 <button
                   onClick={() => handleStatusToggle(vendedor)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    vendedor.status === 'ativo' 
-                      ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                      : 'bg-red-100 text-red-800 hover:bg-red-200'
-                  }`}
                 >
-                  {vendedor.status === 'ativo' ? '✅ Ativo' : '❌ Inativo'}
+                  <Badge
+                    tone={vendedor.status === 'ativo' ? 'success' : 'error'}
+                    className={
+                      vendedor.status === 'ativo'
+                        ? 'hover:bg-success-100'
+                        : 'hover:bg-error-100'
+                    }
+                  >
+                    {vendedor.status === 'ativo' ? (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        Ativo
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                        Inativo
+                      </>
+                    )}
+                  </Badge>
                 </button>
               </div>
               
-              <p className="text-sm text-black-medium">{vendedor.email}</p>
+              <p className="text-sm text-ink-muted">{vendedor.email}</p>
               
               <div className="flex gap-2 mt-2">
-                <span className="text-xs text-black-light bg-gray-100 px-2 py-1 rounded">
+                <span className="text-xs text-ink-muted bg-surface-muted px-2 py-1 rounded">
                   ID: {vendedor.id}
                 </span>
                 {vendedor.criado_em && (
-                  <span className="text-xs text-black-light bg-gray-100 px-2 py-1 rounded">
+                  <span className="text-xs text-ink-muted bg-surface-muted px-2 py-1 rounded">
                     Cadastrado em: {new Date(vendedor.criado_em).toLocaleDateString('pt-BR')}
                   </span>
                 )}
@@ -93,7 +109,7 @@ export const VendedoresListGerente: React.FC<VendedoresListGerenteProps> = ({
               size="sm"
             />
           </div>
-        </div>
+        </Card>
       ))}
     </div>
   );

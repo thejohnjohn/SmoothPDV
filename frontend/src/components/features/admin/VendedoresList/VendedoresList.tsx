@@ -1,7 +1,10 @@
 import React from 'react';
+import { User } from 'lucide-react';
 import type { Vendedor } from '../../../../types/admin';
 import { BotaoAtualizar } from '../../../BotaoAtualizar/BotaoAtualizar';
 import { BotaoDeletar } from '../../../BotaoDeletar/BotaoDeletar';
+import { Badge } from '../../../ui/Badge/Badge';
+import { EmptyState } from '../../../ui/EmptyState/EmptyState';
 
 interface VendedoresListProps {
   vendedores: Vendedor[];
@@ -18,10 +21,10 @@ export const VendedoresList: React.FC<VendedoresListProps> = ({
 }) => {
   if (vendedores.length === 0) {
     return (
-      <div className="text-center py-8 text-black-medium">
-        <p className="text-lg">Nenhum vendedor cadastrado</p>
-        <p className="text-sm">Clique em "Adicionar Vendedor" para começar</p>
-      </div>
+      <EmptyState
+        title="Nenhum vendedor cadastrado"
+        description='Clique em "Adicionar Vendedor" para começar'
+      />
     );
   }
 
@@ -30,29 +33,25 @@ export const VendedoresList: React.FC<VendedoresListProps> = ({
       {vendedores.map(vendedor => (
         <div
           key={vendedor.id}
-          className="flex items-center justify-between p-4 bg-white-medium rounded-lg border border-black-light hover:shadow-md transition-all duration-200"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface p-4 hover:shadow-md transition-all duration-200"
           onClick={() => onSelecionarVendedor(vendedor)}
         >
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary-light rounded-full flex items-center justify-center">
-              <span className="text-lg">👤</span>
+            <div className="w-12 h-12 bg-primary-50 rounded-full flex items-center justify-center">
+              <User className="h-5 w-5" aria-hidden="true" />
             </div>
             
             <div>
-              <h4 className="font-bold text-black">{vendedor.nome}</h4>
-              <p className="text-sm text-black-medium">{vendedor.email}</p>
+              <h4 className="font-bold text-ink">{vendedor.nome}</h4>
+              <p className="text-sm text-ink-muted">{vendedor.email}</p>
               <div className="flex gap-2 mt-1">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  vendedor.status === 'ativo' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
+                <Badge tone={vendedor.status === 'ativo' ? 'success' : 'error'}>
                   {vendedor.status}
-                </span>
+                </Badge>
                 {vendedor.loja_nome && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                  <Badge tone="info">
                     {vendedor.loja_nome}
-                  </span>
+                  </Badge>
                 )}
               </div>
             </div>
@@ -60,7 +59,7 @@ export const VendedoresList: React.FC<VendedoresListProps> = ({
 
           <div className="flex gap-2">
             <BotaoAtualizar 
-              onClick={(e: any) => {
+              onClick={(e) => {
                 e.stopPropagation();
                 onAtualizarVendedor(vendedor.id);
               }}

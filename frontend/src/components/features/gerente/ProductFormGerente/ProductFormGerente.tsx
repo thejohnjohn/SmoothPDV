@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import type { Product } from '../../../../types/products';
+import React, { useState } from 'react';
+import { Lightbulb, Package, Pencil } from 'lucide-react';
+import type { Product, ProductFormData } from '../../../../types/products';
+import { Button } from '../../../ui/Button/Button';
+import { Card } from '../../../ui/Card/Card';
+import { Input } from '../../../ui/Input/Input';
 
 interface ProductFormGerenteProps {
   product?: Product | null;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: ProductFormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
 }
@@ -22,7 +26,9 @@ export const ProductFormGerente: React.FC<ProductFormGerenteProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
+  const [prevProduct, setPrevProduct] = useState(product);
+  if (product !== prevProduct) {
+    setPrevProduct(product);
     if (product) {
       setFormData({
         descricao: product.descricao || '',
@@ -30,7 +36,7 @@ export const ProductFormGerente: React.FC<ProductFormGerenteProps> = ({
         categoria: product.categoria || ''
       });
     }
-  }, [product]);
+  }
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -81,65 +87,58 @@ export const ProductFormGerente: React.FC<ProductFormGerenteProps> = ({
   ];
 
   return (
-    <div className="bg-white rounded-xl border border-black-light p-6">
-      <h3 className="text-xl font-bold text-black mb-4">
-        {product ? '✏️ Editar Produto' : '📦 Novo Produto'}
+    <Card padding="none" className="p-6">
+      <h3 className="flex items-center gap-2 text-xl font-bold text-ink mb-4">
+        {product ? (
+          <>
+            <Pencil className="h-5 w-5" aria-hidden="true" />
+            Editar Produto
+          </>
+        ) : (
+          <>
+            <Package className="h-5 w-5" aria-hidden="true" />
+            Novo Produto
+          </>
+        )}
       </h3>
       
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            Descrição do Produto *
-          </label>
-          <input
-            type="text"
-            value={formData.descricao}
-            onChange={(e) => handleChange('descricao', e.target.value)}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-              errors.descricao ? 'border-red-500' : 'border-black-light'
-            }`}
-            placeholder="Ex: Smartphone Samsung Galaxy S23"
+        <Input
+          label="Descrição do Produto *"
+          type="text"
+          value={formData.descricao}
+          onChange={(e) => handleChange('descricao', e.target.value)}
+          error={errors.descricao}
+          placeholder="Ex: Smartphone Samsung Galaxy S23"
+          required
+        />
+
+        <div className="relative">
+          <span className="absolute left-3 top-[2.875rem] transform -translate-y-1/2 text-ink-muted">
+            R$
+          </span>
+          <Input
+            label="Preço (R$) *"
+            type="number"
+            step="0.01"
+            min="0.01"
+            value={formData.preco}
+            onChange={(e) => handleChange('preco', e.target.value)}
+            error={errors.preco}
+            placeholder="0.00"
             required
+            className="pl-10"
           />
-          {errors.descricao && (
-            <p className="text-red-500 text-sm mt-1">{errors.descricao}</p>
-          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            Preço (R$) *
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-              R$
-            </span>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={formData.preco}
-              onChange={(e) => handleChange('preco', e.target.value)}
-              className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-                errors.preco ? 'border-red-500' : 'border-black-light'
-              }`}
-              placeholder="0.00"
-              required
-            />
-          </div>
-          {errors.preco && (
-            <p className="text-red-500 text-sm mt-1">{errors.preco}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
+          <label className="block text-sm font-semibold text-ink mb-1.5">
             Categoria
           </label>
           <select
             value={formData.categoria}
             onChange={(e) => handleChange('categoria', e.target.value)}
-            className="w-full px-4 py-2 border border-black-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
           >
             <option value="">Selecione uma categoria</option>
             {categories.map(category => (
@@ -150,14 +149,14 @@ export const ProductFormGerente: React.FC<ProductFormGerenteProps> = ({
           </select>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+        <div className="bg-secondary-50 border border-secondary-100 text-secondary-700 rounded-lg p-4 mt-4">
           <div className="flex items-start gap-3">
-            <span className="text-blue-500 text-lg">💡</span>
+            <Lightbulb className="h-5 w-5" aria-hidden="true" />
             <div>
-              <p className="text-blue-800 font-medium text-sm">
+              <p className="font-medium text-sm">
                 Informações importantes
               </p>
-              <p className="text-blue-600 text-sm mt-1">
+              <p className="text-sm mt-1">
                 O produto será cadastrado automaticamente na sua loja.
                 Certifique-se de que o preço está correto antes de salvar.
               </p>
@@ -166,22 +165,24 @@ export const ProductFormGerente: React.FC<ProductFormGerenteProps> = ({
         </div>
 
         <div className="flex gap-3 pt-4">
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="flex-1 bg-primary hover:bg-primary-hover text-white py-3 rounded-lg font-bold transition-all duration-200 disabled:opacity-50"
+            variant="primary"
+            loading={loading}
+            className="flex-1"
           >
             {loading ? 'Salvando...' : (product ? 'Atualizar Produto' : 'Cadastrar Produto')}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
             onClick={onCancel}
-            className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-bold transition-all duration-200"
+            className="flex-1"
           >
             Cancelar
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Card>
   );
 };

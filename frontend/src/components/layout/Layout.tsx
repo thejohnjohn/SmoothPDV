@@ -11,10 +11,10 @@ export const Layout: React.FC = () => {
   const isManager = user?.tipo === 'GERENTE';
 
   return (
-    <div className="flex h-screen bg-white-light font-nunito">
+    <div className="flex h-screen bg-canvas font-nunito">
       {/* Sidebar - apenas para Admin e Gerente */}
       {isManager && (
-        <aside className="w-64 bg-white border-r border-black-light flex-shrink-0">
+        <aside className="w-64 bg-surface border-r border-line flex-shrink-0">
           <Sidebar />
         </aside>
       )}
@@ -22,7 +22,7 @@ export const Layout: React.FC = () => {
       {/* Conteúdo principal */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="bg-white border-b border-black-light shadow-sm flex-shrink-0">
+        <header className="bg-surface border-b border-line shadow-sm flex-shrink-0">
           <Header />
         </header>
 

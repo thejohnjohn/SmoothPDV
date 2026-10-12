@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Building2, Lightbulb, Pencil } from 'lucide-react';
 import type { Loja } from '../../../../types/admin';
+import { Button } from '../../../ui/Button/Button';
+import { Card } from '../../../ui/Card/Card';
+import { Input } from '../../../ui/Input/Input';
 
 interface LojaFormProps {
   loja?: Loja | null;
@@ -25,7 +29,9 @@ export const LojaForm: React.FC<LojaFormProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
+  const [prevLoja, setPrevLoja] = useState(loja);
+  if (loja !== prevLoja) {
+    setPrevLoja(loja);
     if (loja) {
       setFormData({
         nome: loja.nome || '',
@@ -36,7 +42,7 @@ export const LojaForm: React.FC<LojaFormProps> = ({
         status: loja.status || 'ativo'
       });
     }
-  }, [loja]);
+  }
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -129,131 +135,105 @@ export const LojaForm: React.FC<LojaFormProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-black-light p-6">
-      <h3 className="text-xl font-bold text-black mb-4">
-        {loja ? '✏️ Editar Loja' : '🏢 Nova Loja'}
+    <Card>
+      <h3 className="flex items-center gap-2 text-xl font-bold text-ink mb-4">
+        {loja ? (
+          <>
+            <Pencil className="h-5 w-5" aria-hidden="true" />
+            Editar Loja
+          </>
+        ) : (
+          <>
+            <Building2 className="h-5 w-5" aria-hidden="true" />
+            Nova Loja
+          </>
+        )}
       </h3>
       
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            Nome da Loja *
-          </label>
-          <input
-            type="text"
-            value={formData.nome}
-            onChange={(e) => handleChange('nome', e.target.value)}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-              errors.nome ? 'border-red-500' : 'border-black-light'
-            }`}
-            placeholder="Ex: Loja Centro, Loja Shopping"
-            required
-          />
-          {errors.nome && (
-            <p className="text-red-500 text-sm mt-1">{errors.nome}</p>
-          )}
-        </div>
+        <Input
+          type="text"
+          label="Nome da Loja *"
+          value={formData.nome}
+          onChange={(e) => handleChange('nome', e.target.value)}
+          placeholder="Ex: Loja Centro, Loja Shopping"
+          error={errors.nome}
+          required
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            CNPJ *
-          </label>
-          <input
-            type="text"
-            value={formatCNPJ(formData.cnpj)}
-            onChange={(e) => handleChange('cnpj', e.target.value)}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-              errors.cnpj ? 'border-red-500' : 'border-black-light'
-            }`}
-            placeholder="00.000.000/0000-00"
-            maxLength={18}
-            required
-          />
-          {errors.cnpj && (
-            <p className="text-red-500 text-sm mt-1">{errors.cnpj}</p>
-          )}
-        </div>
+        <Input
+          type="text"
+          label="CNPJ *"
+          value={formatCNPJ(formData.cnpj)}
+          onChange={(e) => handleChange('cnpj', e.target.value)}
+          placeholder="00.000.000/0000-00"
+          maxLength={18}
+          error={errors.cnpj}
+          required
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-ink">
             Endereço Completo *
           </label>
           <textarea
             value={formData.endereco}
             onChange={(e) => handleChange('endereco', e.target.value)}
             rows={3}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-              errors.endereco ? 'border-red-500' : 'border-black-light'
+            className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink transition-colors placeholder:text-ink-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+              errors.endereco ? 'border-error-500' : 'border-line'
             }`}
             placeholder="Rua, número, bairro, cidade - Estado"
             required
           />
           {errors.endereco && (
-            <p className="text-red-500 text-sm mt-1">{errors.endereco}</p>
+            <p className="text-xs font-semibold text-error-600">{errors.endereco}</p>
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            Telefone *
-          </label>
-          <input
-            type="text"
-            value={formatTelefone(formData.telefone)}
-            onChange={(e) => handleChange('telefone', e.target.value)}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-              errors.telefone ? 'border-red-500' : 'border-black-light'
-            }`}
-            placeholder="(11) 99999-9999"
-            maxLength={15}
-            required
-          />
-          {errors.telefone && (
-            <p className="text-red-500 text-sm mt-1">{errors.telefone}</p>
-          )}
-        </div>
+        <Input
+          type="text"
+          label="Telefone *"
+          value={formatTelefone(formData.telefone)}
+          onChange={(e) => handleChange('telefone', e.target.value)}
+          placeholder="(11) 99999-9999"
+          maxLength={15}
+          error={errors.telefone}
+          required
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
-            E-mail *
-          </label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleChange('email', e.target.value)}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-              errors.email ? 'border-red-500' : 'border-black-light'
-            }`}
-            placeholder="loja@exemplo.com"
-            required
-          />
-          {errors.email && (
-            <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-          )}
-        </div>
+        <Input
+          type="email"
+          label="E-mail *"
+          value={formData.email}
+          onChange={(e) => handleChange('email', e.target.value)}
+          placeholder="loja@exemplo.com"
+          error={errors.email}
+          required
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-black mb-2">
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-ink">
             Status
           </label>
           <select
             value={formData.status}
             onChange={(e) => handleChange('status', e.target.value as 'ativo' | 'inativo')}
-            className="w-full px-4 py-2 border border-black-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
           >
             <option value="ativo">Ativo</option>
             <option value="inativo">Inativo</option>
           </select>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+        <div className="bg-secondary-50 border border-secondary-100 rounded-lg p-4 mt-4">
           <div className="flex items-start gap-3">
-            <span className="text-blue-500 text-lg">💡</span>
+            <Lightbulb className="h-5 w-5 text-secondary-500" aria-hidden="true" />
             <div>
-              <p className="text-blue-800 font-medium text-sm">
+              <p className="text-secondary-700 font-medium text-sm">
                 Informações importantes
               </p>
-              <p className="text-blue-600 text-sm mt-1">
+              <p className="text-secondary-700 text-sm mt-1">
                 Todos os campos marcados com * são obrigatórios. 
                 O CNPJ será armazenado apenas com números.
               </p>
@@ -262,22 +242,23 @@ export const LojaForm: React.FC<LojaFormProps> = ({
         </div>
 
         <div className="flex gap-3 pt-4">
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="flex-1 bg-primary hover:bg-primary-hover text-white py-3 rounded-lg font-bold transition-all duration-200 disabled:opacity-50"
+            loading={loading}
+            className="flex-1"
           >
             {loading ? 'Salvando...' : (loja ? 'Atualizar Loja' : 'Cadastrar Loja')}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
             onClick={onCancel}
-            className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg font-bold transition-all duration-200"
+            className="flex-1"
           >
             Cancelar
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Card>
   );
 };
