@@ -1,5 +1,26 @@
 import { api } from './api';
-import type { Loja, Gerente, Vendedor, VendedorCreateData } from '../types/admin';
+import type { Loja, Gerente, Vendedor, VendedorCreateData, GerenteCreateData } from '../types/admin';
+
+interface GerenteUpdatePayload {
+  nome?: string;
+  email?: string;
+  id_loja?: number;
+}
+
+interface VendedorUpdatePayload {
+  nome?: string;
+  email?: string;
+  senha?: string;
+  id_loja?: number;
+  status?: 'ativo' | 'inativo';
+}
+
+export interface VendedorStats {
+  total_vendas: number;
+  total_vendido: number;
+  ticket_medio: number;
+  produtos_cadastrados: number;
+}
 
 export const adminService = {
   // ===== LOJAS =====
@@ -38,7 +59,7 @@ export const adminService = {
     return response.data;
   },
 
-  async createGerente(gerente: Omit<Gerente, 'id' | 'criado_em'> & { senha: string }): Promise<Gerente> {
+  async createGerente(gerente: GerenteCreateData): Promise<Gerente> {
     // 🆕 CORREÇÃO: Converter para o formato esperado pelo backend
     const gerenteData = {
       nome: gerente.nome,
@@ -55,7 +76,7 @@ export const adminService = {
 
   async updateGerente(id: number, gerente: Partial<Gerente>): Promise<Gerente> {
     // 🆕 CORREÇÃO: Converter para o formato esperado pelo backend
-    const gerenteData: any = {};
+    const gerenteData: GerenteUpdatePayload = {};
     
     if (gerente.nome) gerenteData.nome = gerente.nome;
     if (gerente.email) gerenteData.email = gerente.email;
@@ -101,7 +122,7 @@ export const adminService = {
 
 async updateVendedor(id: number, vendedor: Partial<VendedorCreateData>): Promise<Vendedor> {
   // 🆕 CORREÇÃO: Converter dados corretamente
-  const vendedorData: any = {};
+  const vendedorData: VendedorUpdatePayload = {};
   
   if (vendedor.nome) vendedorData.nome = vendedor.nome;
   if (vendedor.email) vendedorData.email = vendedor.email;
@@ -128,7 +149,7 @@ async updateVendedor(id: number, vendedor: Partial<VendedorCreateData>): Promise
     await api.delete(`/sellers/${id}`);
   },
 
-  async getVendedorStats(id: number): Promise<any> {
+  async getVendedorStats(id: number): Promise<VendedorStats> {
     const response = await api.get(`/sellers/${id}/stats`);
     return response.data;
   },

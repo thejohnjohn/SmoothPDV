@@ -1,12 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { User, LoginData, AuthContextType } from '../types/auth';
+import React, { useEffect, useState } from 'react';
+import type { User, LoginData } from '../types/auth';
+import { AuthContext } from './authContext';
 import { authService } from '../services/authService';
-
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('token')));
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -15,8 +14,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .then(userData => setUser(userData))
         .catch(() => localStorage.removeItem('token'))
         .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
     }
   }, []);
 
@@ -36,12 +33,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

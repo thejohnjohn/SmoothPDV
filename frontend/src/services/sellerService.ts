@@ -1,5 +1,6 @@
 import { api } from './api';
 import type { Vendedor, VendedorCreateData } from '../types/admin';
+import type { Sale } from '../types/sales';
 
 export interface SellerStats {
   total_vendas: number;
@@ -18,19 +19,36 @@ export interface QuickSaleData {
   observacao?: string;
 }
 
+export interface SellerReportData {
+  data_inicio: string;
+  data_fim: string;
+  tipo_relatorio?: string;
+}
+
+export interface SellerEmailReportData {
+  recipientEmail: string;
+  data_inicio: string;
+  data_fim: string;
+  message?: string;
+}
+
+export interface InvoiceData {
+  sale_id: number;
+}
+
 export const sellerService = {
   // ===== VENDAS DO VENDEDOR =====
-  async getSales(): Promise<any[]> {
+  async getSales(): Promise<Sale[]> {
     const response = await api.get('/seller/sales');
     return response.data;
   },
 
-  async getSaleById(id: number): Promise<any> {
+  async getSaleById(id: number): Promise<Sale> {
     const response = await api.get(`/seller/sales/${id}`);
     return response.data;
   },
 
-  async createQuickSale(data: QuickSaleData): Promise<any> {
+  async createQuickSale(data: QuickSaleData): Promise<Sale> {
     const response = await api.post('/seller/sales/quick', data);
     return response.data;
   },
@@ -42,19 +60,19 @@ export const sellerService = {
   },
 
   // ===== RELATÓRIOS DO VENDEDOR =====
-  async generatePDFReport(reportData: any): Promise<Blob> {
+  async generatePDFReport(reportData: SellerReportData): Promise<Blob> {
     const response = await api.post('/seller/reports/pdf', reportData, {
       responseType: 'blob'
     });
     return response.data;
   },
 
-  async sendEmailReport(emailData: any): Promise<any> {
+  async sendEmailReport(emailData: SellerEmailReportData): Promise<unknown> {
     const response = await api.post('/seller/reports/email', emailData);
     return response.data;
   },
 
-  async generateInvoice(invoiceData: any): Promise<Blob> {
+  async generateInvoice(invoiceData: InvoiceData): Promise<Blob> {
     const response = await api.post('/seller/reports/invoice', invoiceData, {
       responseType: 'blob'
     });
@@ -83,7 +101,7 @@ export const sellerService = {
 
   async updateVendedor(id: number, data: Partial<VendedorCreateData>): Promise<Vendedor> {
     // 🆕 CORREÇÃO: Sempre usar id_loja do gerente logado
-    const vendedorData: any = {
+    const vendedorData: Partial<VendedorCreateData> = {
       nome: data.nome,
       email: data.email,
       id_loja: data.id_loja // 🆕 Já deve vir com a loja do gerente
@@ -104,7 +122,7 @@ export const sellerService = {
     await api.delete(`/sellers/${id}`);
   },
 
-  async getVendedorStats(id: number): Promise<any> {
+  async getVendedorStats(id: number): Promise<SellerStats> {
     const response = await api.get(`/sellers/${id}/stats`);
     return response.data;
   }

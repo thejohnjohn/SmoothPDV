@@ -1,6 +1,23 @@
 import type { Sale, CreateSaleData } from '../types/sales';
 import { api } from './api';
 
+export interface QuickSaleData {
+  produtos: Array<{
+    idmercadoria: number;
+    quantidade: number;
+  }>;
+  metodo_pagamento: string;
+  valor_pago?: number;
+  observacao?: string;
+}
+
+export interface SellerStats {
+  total_vendas: number;
+  total_vendido: number;
+  ticket_medio: number;
+  produtos_cadastrados: number;
+}
+
 export const saleService = {
   async getAll(): Promise<Sale[]> {
     const response = await api.get('/sales');
@@ -37,12 +54,12 @@ export const saleService = {
     return response.data;
   },
 
-  async createQuickSale(data: any): Promise<Sale> {
+  async createQuickSale(data: QuickSaleData): Promise<Sale> {
     const response = await api.post('/seller/sales/quick', data);
     return response.data;
   },
 
-  async getMyStats(): Promise<any> {
+  async getMyStats(): Promise<SellerStats> {
     const response = await api.get('/seller/stats');
     return response.data;
   }

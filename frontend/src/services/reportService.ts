@@ -4,7 +4,31 @@ export interface ReportData {
   startDate: string;
   endDate: string;
   reportType: 'vendas' | 'produtos' | 'financeiro';
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
+}
+
+export interface ReportEmailData extends ReportData {
+  recipientEmail: string;
+  subject?: string;
+  message?: string;
+  dashboardData?: unknown;
+}
+
+export interface SellerReportData {
+  data_inicio: string;
+  data_fim: string;
+  tipo_relatorio?: string;
+}
+
+export interface SellerEmailData {
+  recipientEmail: string;
+  data_inicio: string;
+  data_fim: string;
+  message?: string;
+}
+
+export interface InvoiceData {
+  sale_id: number;
 }
 
 export const reportService = {
@@ -22,25 +46,25 @@ export const reportService = {
     return response.data;
   },
 
-  async sendEmail(data: ReportData & { recipientEmail: string; message?: string }): Promise<any> {
+  async sendEmail(data: ReportEmailData): Promise<unknown> {
     const response = await api.post('/reports/email', data);
     return response.data;
   },
 
   // ===== MÉTODOS ESPECÍFICOS PARA VENDEDORES =====
-  async generateSellerPDF(data: any): Promise<Blob> {
+  async generateSellerPDF(data: SellerReportData): Promise<Blob> {
     const response = await api.post('/seller/reports/pdf', data, {
       responseType: 'blob'
     });
     return response.data;
   },
 
-  async sendSellerEmail(data: any): Promise<any> {
+  async sendSellerEmail(data: SellerEmailData): Promise<unknown> {
     const response = await api.post('/seller/reports/email', data);
     return response.data;
   },
 
-  async generateInvoice(data: any): Promise<Blob> {
+  async generateInvoice(data: InvoiceData): Promise<Blob> {
     const response = await api.post('/seller/reports/invoice', data, {
       responseType: 'blob'
     });

@@ -1,6 +1,23 @@
 import type { Product, ProductFormData } from '../types/products';
 import { api } from './api';
 
+export interface StoreProductsStats {
+  estatisticas_gerais: {
+    total_produtos: number;
+    produtos_vendidos: number;
+    total_vendido: number;
+    faturamento_produtos: string | number;
+    produtos_nao_vendidos: number;
+  };
+  produtos_mais_vendidos: Array<{
+    id: number;
+    descricao: string;
+    preco: string | number;
+    total_vendido: string | number;
+    faturamento: string | number;
+  }>;
+}
+
 export const productService = {
   async getAll(): Promise<Product[]> {
     const response = await api.get('/products');
@@ -38,7 +55,7 @@ export const productService = {
     return response.data;
   },
 
-  async getStoreProductsStats(): Promise<any> {
+  async getStoreProductsStats(): Promise<StoreProductsStats> {
     const response = await api.get('/store/products/stats');
     return response.data;
   }
