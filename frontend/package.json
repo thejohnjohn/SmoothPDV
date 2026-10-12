@@ -12,6 +12,7 @@
   "dependencies": {
     "axios": "^1.6.0",
     "dotenv": "^17.2.3",
+    "lucide-react": "^1.55.0",
     "nodemailer": "^7.0.10",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
