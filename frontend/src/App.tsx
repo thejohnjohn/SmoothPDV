@@ -2,13 +2,15 @@ import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { AppRouter } from './routers/AppRouter';
-import './styles/globals.css';
+import { ToastProvider } from './components/ui/Toast/ToastProvider';
 
 const App: React.FC = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRouter />
+        <ToastProvider>
+          <AppRouter />
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );

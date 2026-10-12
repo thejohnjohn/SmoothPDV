@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
+import { BarChart3, CheckCircle2, Lightbulb, Plus, RefreshCw, XCircle } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useVendedoresGerente } from '../../../hooks/useVendedoresGerente';
 import { VendedoresListGerente } from '../../../components/features/gerente/VendedoresListGerente/VendedoresListGerente';
 import { VendedorFormGerente } from '../../../components/features/gerente/VendedorFormGerente/VendedorFormGerente';
+import { Badge } from '../../../components/ui/Badge/Badge';
+import { Button } from '../../../components/ui/Button/Button';
+import { Card } from '../../../components/ui/Card/Card';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog/ConfirmDialog';
+import { ErrorState } from '../../../components/ui/ErrorState/ErrorState';
+import { PageHeader } from '../../../components/ui/PageHeader/PageHeader';
+import { useToast } from '../../../components/ui/Toast/useToast';
 import type { Vendedor, VendedorCreateData } from '../../../types/admin';
 
 export const VendedoresGerente: React.FC = () => {
@@ -18,15 +26,17 @@ export const VendedoresGerente: React.FC = () => {
     toggleVendedorStatus
   } = useVendedoresGerente();
 
+  const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [selectedVendedor, setSelectedVendedor] = useState<Vendedor | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+  const [vendedorParaRemover, setVendedorParaRemover] = useState<number | null>(null);
 
   // Verificar se o usuário é gerente
   if (user?.tipo !== 'GERENTE') {
     return (
       <div className="p-6">
-        <div className="bg-error text-white p-4 rounded-lg text-center">
+        <div className="bg-error-600 text-white p-4 rounded-lg text-center">
           <p className="text-lg font-bold">Acesso Restrito</p>
           <p>Esta página é exclusiva para gerentes.</p>
         </div>
@@ -83,14 +93,19 @@ export const VendedoresGerente: React.FC = () => {
     }
   };
 
-  const handleDeletarVendedor = async (id: number) => {
-    if (window.confirm('Tem certeza que deseja remover este vendedor da sua loja?')) {
-      try {
-        await deleteVendedor(id);
-      } catch (err) {
-        console.error('Erro ao deletar vendedor:', err);
-        alert('Erro ao remover vendedor. Tente novamente.');
-      }
+  const handleDeletarVendedor = (id: number) => {
+    setVendedorParaRemover(id);
+  };
+
+  const handleConfirmarRemocao = async () => {
+    if (vendedorParaRemover === null) return;
+    const id = vendedorParaRemover;
+    setVendedorParaRemover(null);
+    try {
+      await deleteVendedor(id);
+    } catch (err) {
+      console.error('Erro ao deletar vendedor:', err);
+      showToast('Erro ao remover vendedor. Tente novamente.', 'error');
     }
   };
 
@@ -99,7 +114,7 @@ export const VendedoresGerente: React.FC = () => {
       await toggleVendedorStatus(id, status);
     } catch (err) {
       console.error('Erro ao atualizar status:', err);
-      alert('Erro ao alterar status do vendedor.');
+      showToast('Erro ao alterar status do vendedor.', 'error');
     }
   };
 
@@ -112,50 +127,40 @@ export const VendedoresGerente: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-black">👥 Gerenciar Vendedores</h1>
-          <p className="text-black-medium mt-1">
-            Gerencie a equipe de vendedores da sua loja
-          </p>
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            onClick={loadVendedores}
-            disabled={loading}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-bold transition-all duration-200 disabled:opacity-50"
-          >
-            🔄 Atualizar
-          </button>
-
-          {!showForm && (
-            <button
-              onClick={handleAdicionarVendedor}
-              className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-bold transition-all duration-200 shadow-lg hover:shadow-xl"
+      <PageHeader
+        title="Gerenciar Vendedores"
+        subtitle="Gerencie a equipe de vendedores da sua loja"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={loadVendedores}
+              disabled={loading}
             >
-              + Adicionar Vendedor
-            </button>
-          )}
-        </div>
-      </div>
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              Atualizar
+            </Button>
+
+            {!showForm && (
+              <Button
+                size="lg"
+                onClick={handleAdicionarVendedor}
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Adicionar Vendedor
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {error && (
-        <div className="bg-error text-white p-4 rounded-lg">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">⚠️</span>
-            <div>
-              <p className="font-bold">Erro ao carregar vendedores</p>
-              <p className="text-sm opacity-90">{error}</p>
-            </div>
-            <button
-              onClick={loadVendedores}
-              className="ml-auto bg-white text-error px-3 py-1 rounded text-sm font-bold hover:bg-gray-100"
-            >
-              Tentar Novamente
-            </button>
-          </div>
-        </div>
+        <ErrorState
+          title="Erro ao carregar vendedores"
+          message={error}
+          onRetry={loadVendedores}
+        />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -169,19 +174,21 @@ export const VendedoresGerente: React.FC = () => {
               loading={formLoading}
             />
           ) : (
-            <div className="bg-white rounded-xl border border-black-light p-6">
+            <Card>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-black">
+                <h2 className="text-xl font-bold text-ink">
                   Equipe de Vendedores ({stats.total})
                 </h2>
 
                 <div className="flex gap-4 text-sm">
-                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
-                    ✅ {stats.ativos} ativos
-                  </span>
-                  <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full">
-                    ❌ {stats.inativos} inativos
-                  </span>
+                  <Badge tone="success">
+                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    {stats.ativos} ativos
+                  </Badge>
+                  <Badge tone="error">
+                    <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                    {stats.inativos} inativos
+                  </Badge>
                 </div>
               </div>
 
@@ -192,7 +199,7 @@ export const VendedoresGerente: React.FC = () => {
                 onAtualizarStatus={handleAtualizarStatus}
                 loading={loading}
               />
-            </div>
+            </Card>
           )}
         </div>
 
@@ -200,37 +207,52 @@ export const VendedoresGerente: React.FC = () => {
         {!showForm && (
           <div className="lg:col-span-1 space-y-6">
             {/* Cartão de Estatísticas */}
-            <div className="bg-white rounded-xl border border-black-light p-6">
-              <h3 className="text-lg font-bold text-black mb-4">📊 Resumo da Equipe</h3>
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
+                <BarChart3 className="h-5 w-5" aria-hidden="true" />
+                Resumo da Equipe
+              </h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                  <span className="text-black-medium">Total Vendedores</span>
-                  <span className="font-bold text-blue-600 text-xl">{stats.total}</span>
+                <div className="flex justify-between items-center p-3 bg-secondary-50 rounded-lg">
+                  <span className="text-ink-muted">Total Vendedores</span>
+                  <span className="font-bold text-secondary-700 text-xl">{stats.total}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                  <span className="text-black-medium">Vendedores Ativos</span>
-                  <span className="font-bold text-green-600 text-xl">{stats.ativos}</span>
+                <div className="flex justify-between items-center p-3 bg-success-50 rounded-lg">
+                  <span className="text-ink-muted">Vendedores Ativos</span>
+                  <span className="font-bold text-success-700 text-xl">{stats.ativos}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
-                  <span className="text-black-medium">Vendedores Inativos</span>
-                  <span className="font-bold text-red-600 text-xl">{stats.inativos}</span>
+                <div className="flex justify-between items-center p-3 bg-error-50 rounded-lg">
+                  <span className="text-ink-muted">Vendedores Inativos</span>
+                  <span className="font-bold text-error-600 text-xl">{stats.inativos}</span>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Dicas Rápidas */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-              <h3 className="text-lg font-bold text-yellow-800 mb-3">💡 Dicas</h3>
-              <ul className="space-y-2 text-sm text-yellow-700">
+            <Card>
+              <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-warning-600">
+                <Lightbulb className="h-5 w-5" aria-hidden="true" />
+                Dicas
+              </h3>
+              <ul className="space-y-2 text-sm text-ink-muted">
                 <li>• Vendedores ativos podem acessar o PDV</li>
                 <li>• Vendedores inativos não conseguem fazer login</li>
                 <li>• Cada vendedor tem suas próprias vendas e relatórios</li>
                 <li>• Monitore o desempenho da sua equipe no Dashboard</li>
               </ul>
-            </div>
+            </Card>
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={vendedorParaRemover !== null}
+        title="Remover vendedor"
+        message="Tem certeza que deseja remover este vendedor da sua loja?"
+        confirmLabel="Remover"
+        onConfirm={handleConfirmarRemocao}
+        onCancel={() => setVendedorParaRemover(null)}
+      />
     </div>
   );
 };

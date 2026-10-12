@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { CreditCard, Package, RefreshCw, Search, ShoppingCart, Trash2 } from 'lucide-react';
 import type { Product } from '../../types/products';
 import { productService } from '../../services/productService';
 import { saleService } from '../../services/saleService';
 import { useAuth } from '../../hooks/useAuth';
 import { PaymentModal } from '../../components/PaymentModal/PaymentModal';
-import { InvoiceModal } from '../../components/InvoiceModal/InvoiceModal'; // ✅ Importando o modal de nota fiscal
+import type { PaymentData } from '../../components/PaymentModal/PaymentModal';
+import { InvoiceModal } from '../../components/InvoiceModal/InvoiceModal'; // Importando o modal de nota fiscal
+import type { SaleData } from '../../components/InvoiceModal/InvoiceModal';
+import { Button } from '../../components/ui/Button/Button';
+import { Input } from '../../components/ui/Input/Input';
+import { EmptyState } from '../../components/ui/EmptyState/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState/ErrorState';
+import { LoadingState } from '../../components/ui/LoadingState/LoadingState';
+import { useToast } from '../../components/ui/Toast/useToast';
 
 interface CartItem {
   product: Product;
@@ -18,10 +27,11 @@ export const PDV: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false); // ✅ Estado para modal de NF
-  const [lastSaleId, setLastSaleId] = useState<number | null>(null); // ✅ Último ID de venda
-  const [lastSaleData, setLastSaleData] = useState<any>(null); // ✅ Dados da última venda
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false); // Estado para modal de NF
+  const [lastSaleId, setLastSaleId] = useState<number | null>(null); // Último ID de venda
+  const [lastSaleData, setLastSaleData] = useState<SaleData | null>(null); // Dados da última venda
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadProducts();
@@ -85,9 +95,9 @@ export const PDV: React.FC = () => {
     setCart([]);
   };
 
-  const finalizeSale = async (paymentData: any) => {
+  const finalizeSale = async (paymentData: PaymentData) => {
     if (cart.length === 0) {
-      alert('Adicione produtos ao carrinho primeiro!');
+      showToast('Adicione produtos ao carrinho primeiro!', 'error');
       return;
     }
 
@@ -112,48 +122,49 @@ export const PDV: React.FC = () => {
         }
       };
 
-      // ✅ Criar venda no backend
+      // Criar venda no backend
       const novaVenda = await saleService.create(saleData);
       
-      // ✅ Salvar dados da venda para nota fiscal
+      // Salvar dados da venda para nota fiscal
       setLastSaleId(novaVenda.id);
       setLastSaleData(novaVenda);
       
-      // ✅ Limpar carrinho
+      // Limpar carrinho
       setCart([]);
       setShowPaymentModal(false);
       
-      // ✅ Mostrar mensagem de sucesso
+      // Mostrar mensagem de sucesso
       const methodName = getPaymentMethodName(paymentData.metodo_pagamento);
-      const changeMessage = paymentData.troco > 0 
-        ? ` Troco: R$ ${paymentData.troco.toFixed(2)}` 
+      const changeAmount = paymentData.troco ?? 0;
+      const changeMessage = changeAmount > 0 
+        ? ` Troco: R$ ${changeAmount.toFixed(2)}` 
         : '';
       
-      alert(`🎉 Venda finalizada com sucesso!\n💳 ${methodName}${changeMessage}`);
+      showToast(`Venda finalizada com sucesso!\n${methodName}${changeMessage}`, 'success');
       
-      // ✅ Abrir modal de nota fiscal
+      // Abrir modal de nota fiscal
       setShowInvoiceModal(true);
       
     } catch (error) {
       console.error('Erro ao finalizar venda:', error);
-      alert('❌ Erro ao finalizar venda! Verifique o console.');
+      showToast('Erro ao finalizar venda! Verifique o console.', 'error');
     }
   };
 
   const getPaymentMethodName = (method: string) => {
     const methods: { [key: string]: string } = {
-      'DINHEIRO': '💰 Dinheiro',
-      'CARTAO_DEBITO': '💳 Cartão Débito', 
-      'CARTAO_CREDITO': '💳 Cartão Crédito',
-      'PIX': '📱 Pix',
-      'BOLETO': '🏦 Boleto'
+      'DINHEIRO': 'Dinheiro',
+      'CARTAO_DEBITO': 'Cartão Débito', 
+      'CARTAO_CREDITO': 'Cartão Crédito',
+      'PIX': 'Pix',
+      'BOLETO': 'Boleto'
     };
     return methods[method] || method;
   };
 
   const openPaymentModal = () => {
     if (cart.length === 0) {
-      alert('Adicione produtos ao carrinho primeiro!');
+      showToast('Adicione produtos ao carrinho primeiro!', 'error');
       return;
     }
     setShowPaymentModal(true);
@@ -162,10 +173,7 @@ export const PDV: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-black-light">Carregando produtos...</p>
-        </div>
+        <LoadingState label="Carregando produtos..." />
       </div>
     );
   }
@@ -173,38 +181,35 @@ export const PDV: React.FC = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="text-error text-4xl mb-4">⚠️</div>
-          <p className="text-black-medium mb-2">{error}</p>
-          <p className="text-black-light text-sm mb-4">Backend: http://localhost:3000</p>
-          <button 
-            onClick={loadProducts}
-            className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg font-nunito font-bold transition-colors"
-          >
-            🔄 Tentar Novamente
-          </button>
-        </div>
+        <ErrorState
+          title={error}
+          message="Backend: http://localhost:3000"
+          onRetry={loadProducts}
+        />
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-white-light flex flex-col font-nunito">
+    <div className="h-screen bg-canvas flex flex-col font-nunito">
       {/* Header */}
-      <div className="bg-white border-b border-black-light px-6 py-4">
+      <div className="bg-surface border-b border-line px-6 py-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-black">🛒 PDV - Ponto de Venda</h1>
-            <p className="text-base text-black-medium mt-1">
+            <h1 className="flex items-center gap-2 text-3xl font-bold text-ink">
+              <ShoppingCart className="h-8 w-8" aria-hidden="true" />
+              PDV - Ponto de Venda
+            </h1>
+            <p className="text-base text-ink-muted mt-1">
               {products.length} produtos disponíveis
             </p>
           </div>
           <div className="text-right">
-            <div className="text-base text-black-medium">
+            <div className="text-base text-ink-muted">
               Vendedor: <span className="font-bold">{user?.nome}</span>
             </div>
             {user?.tipo && (
-              <span className="bg-primary-light text-primary px-3 py-1 rounded-full text-sm font-bold">
+              <span className="bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-sm font-bold">
                 {user.tipo}
               </span>
             )}
@@ -214,29 +219,26 @@ export const PDV: React.FC = () => {
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 p-6">
         {/* Coluna Produtos */}
-        <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-black-light p-6">
+        <div className="lg:col-span-3 bg-surface rounded-xl shadow-sm border border-line p-6">
           {/* Busca e Controles */}
           <div className="flex gap-4 mb-6">
             <div className="flex-1">
-              <input
+              <Input
                 type="text"
-                placeholder="🔍 Buscar produto por nome..."
+                placeholder="Buscar produto por nome..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full px-4 py-3 border border-black-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-nunito"
               />
             </div>
-            <button
-              onClick={loadProducts}
-              className="bg-white-medium hover:bg-primary-light text-black-medium px-4 py-2 rounded-lg border border-black-light transition-colors font-nunito font-bold"
-            >
-              🔄 Atualizar
-            </button>
+            <Button variant="outline" onClick={loadProducts}>
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              Atualizar
+            </Button>
           </div>
 
           {/* Info de Resultados */}
           <div className="mb-4 flex justify-between items-center">
-            <div className="text-base text-black-medium">
+            <div className="text-base text-ink-muted">
               {search ? (
                 <span>
                   Buscando por: "<span className="font-bold">"{search}"</span>" • 
@@ -252,9 +254,10 @@ export const PDV: React.FC = () => {
             {cart.length > 0 && (
               <button
                 onClick={clearCart}
-                className="text-base text-error hover:text-red-700 transition-colors font-nunito"
+                className="flex items-center gap-1 text-base text-error-600 hover:text-error-700 transition-colors font-nunito"
               >
-                🗑️ Limpar Carrinho
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                Limpar Carrinho
               </button>
             )}
           </div>
@@ -264,29 +267,29 @@ export const PDV: React.FC = () => {
             {filteredProducts.map(product => (
               <div
                 key={product.id}
-                className="bg-white border border-black-light rounded-lg p-4 hover:border-primary hover:shadow-md transition-all cursor-pointer group"
+                className="bg-surface border border-line rounded-lg p-4 hover:border-primary-600 hover:shadow-md transition-all cursor-pointer group"
                 onClick={() => addToCart(product)}
               >
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-black group-hover:text-primary line-clamp-2 flex-1 text-lg">
+                  <h3 className="font-bold text-ink group-hover:text-primary-600 line-clamp-2 flex-1 text-lg">
                     {product.descricao}
                   </h3>
-                  <span className="bg-secondary-light text-secondary text-sm px-2 py-1 rounded-full ml-2 font-bold">
+                  <span className="bg-secondary-50 text-secondary-700 text-sm px-2 py-1 rounded-full ml-2 font-bold">
                     #{product.id}
                   </span>
                 </div>
                 
-                <p className="text-xl font-bold text-success">
+                <p className="text-xl font-bold text-success-600">
                   R$ {product.preco}
                 </p>
                 
                 {product.vendedor_nome && (
-                  <p className="text-sm text-black-light mt-1">
+                  <p className="text-sm text-ink-muted mt-1">
                     Cadastrado por: {product.vendedor_nome}
                   </p>
                 )}
                 
-                <button className="w-full mt-3 bg-primary hover:bg-primary-hover text-white py-2 px-4 rounded-lg transition-colors font-nunito font-bold text-base">
+                <button className="w-full mt-3 bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg transition-colors font-nunito font-bold text-base">
                   + Adicionar ao Carrinho
                 </button>
               </div>
@@ -294,51 +297,52 @@ export const PDV: React.FC = () => {
           </div>
 
           {filteredProducts.length === 0 && (
-            <div className="text-center py-12">
+            <div className="py-6">
               {search ? (
-                <>
-                  <div className="text-black-light text-6xl mb-4">🔍</div>
-                  <p className="text-black-medium text-xl">Nenhum produto encontrado</p>
-                  <p className="text-black-light mt-1 text-lg">
-                    Não encontramos produtos para "<span className="font-bold">{search}</span>"
-                  </p>
-                  <button 
-                    onClick={() => setSearch('')}
-                    className="mt-4 text-primary hover:text-primary-medium transition-colors font-nunito font-bold text-lg"
-                  >
-                    Limpar busca e ver todos os produtos
-                  </button>
-                </>
+                <EmptyState
+                  icon={<Search className="h-8 w-8" aria-hidden="true" />}
+                  title="Nenhum produto encontrado"
+                  description={`Não encontramos produtos para "${search}"`}
+                  action={
+                    <button
+                      onClick={() => setSearch('')}
+                      className="text-primary-700 hover:text-primary-400 transition-colors font-nunito font-bold text-lg"
+                    >
+                      Limpar busca e ver todos os produtos
+                    </button>
+                  }
+                />
               ) : (
-                <>
-                  <div className="text-black-light text-6xl mb-4">📦</div>
-                  <p className="text-black-medium text-xl">Nenhum produto cadastrado</p>
-                  <p className="text-black-light mt-1 text-lg">
-                    Cadastre produtos no sistema para começar as vendas
-                  </p>
-                </>
+                <EmptyState
+                  icon={<Package className="h-8 w-8" aria-hidden="true" />}
+                  title="Nenhum produto cadastrado"
+                  description="Cadastre produtos no sistema para começar as vendas"
+                />
               )}
             </div>
           )}
         </div>
 
         {/* Coluna Carrinho */}
-        <div className="bg-white rounded-xl shadow-sm border border-black-light flex flex-col">
+        <div className="bg-surface rounded-xl shadow-sm border border-line flex flex-col">
           {/* Header do Carrinho */}
-          <div className="p-6 border-b border-black-light">
+          <div className="p-6 border-b border-line">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-black">🛍️ Carrinho</h2>
+              <h2 className="flex items-center gap-2 text-2xl font-bold text-ink">
+                <ShoppingCart className="h-6 w-6" aria-hidden="true" />
+                Carrinho
+              </h2>
               <div className="flex items-center gap-2">
-                <span className="bg-primary-light text-primary text-base font-bold px-3 py-1 rounded-full">
+                <span className="bg-primary-100 text-primary-700 text-base font-bold px-3 py-1 rounded-full">
                   {cart.length} itens
                 </span>
                 {cart.length > 0 && (
                   <button
                     onClick={clearCart}
-                    className="text-black-light hover:text-error transition-colors text-base"
+                    className="text-ink-muted hover:text-error-600 transition-colors text-base"
                     title="Limpar carrinho"
                   >
-                    🗑️
+                    <Trash2 className="h-5 w-5" aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -348,32 +352,30 @@ export const PDV: React.FC = () => {
           {/* Itens do Carrinho */}
           <div className="flex-1 overflow-y-auto p-6">
             {cart.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-black-light text-6xl mb-4">🛒</div>
-                <p className="text-black-medium text-lg">Carrinho vazio</p>
-                <p className="text-black-light text-base mt-1">
-                  Clique nos produtos para adicionar
-                </p>
-              </div>
+              <EmptyState
+                icon={<ShoppingCart className="h-8 w-8" aria-hidden="true" />}
+                title="Carrinho vazio"
+                description="Clique nos produtos para adicionar"
+              />
             ) : (
               <div className="space-y-4">
                 {cart.map(item => (
-                  <div key={item.product.id} className="bg-white-medium rounded-lg p-4">
+                  <div key={item.product.id} className="bg-surface-muted rounded-lg p-4">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1">
-                        <h4 className="font-bold text-black text-lg">
+                        <h4 className="font-bold text-ink text-lg">
                           {item.product.descricao}
                         </h4>
-                        <p className="text-base text-black-medium mt-1">
+                        <p className="text-base text-ink-muted mt-1">
                           R$ {item.product.preco} cada
                         </p>
                       </div>
                       <button
                         onClick={() => removeFromCart(item.product.id)}
-                        className="text-black-light hover:text-error transition-colors ml-2"
+                        className="text-ink-muted hover:text-error-600 transition-colors ml-2"
                         title="Remover item"
                       >
-                        🗑️
+                        <Trash2 className="h-5 w-5" aria-hidden="true" />
                       </button>
                     </div>
                     
@@ -381,7 +383,7 @@ export const PDV: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                          className="w-8 h-8 flex items-center justify-center border border-black-light rounded-lg hover:bg-primary-light transition-colors font-bold"
+                          className="w-8 h-8 flex items-center justify-center border border-line rounded-lg hover:bg-primary-100 transition-colors font-bold"
                         >
                           -
                         </button>
@@ -390,14 +392,14 @@ export const PDV: React.FC = () => {
                         </span>
                         <button
                           onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                          className="w-8 h-8 flex items-center justify-center border border-black-light rounded-lg hover:bg-primary-light transition-colors font-bold"
+                          className="w-8 h-8 flex items-center justify-center border border-line rounded-lg hover:bg-primary-100 transition-colors font-bold"
                         >
                           +
                         </button>
                       </div>
                       
                       <div className="text-right">
-                        <p className="font-bold text-success text-xl">
+                        <p className="font-bold text-success-600 text-xl">
                           R$ {(item.product.preco * item.quantity).toFixed(2)}
                         </p>
                       </div>
@@ -410,34 +412,32 @@ export const PDV: React.FC = () => {
 
           {/* Footer do Carrinho */}
           {cart.length > 0 && (
-            <div className="p-6 border-t border-black-light space-y-6">
+            <div className="p-6 border-t border-line space-y-6">
               {/* Total */}
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-xl">
                   <span className="font-bold">Total:</span>
-                  <span className="font-bold text-3xl text-black">
+                  <span className="font-bold text-3xl text-ink">
                     R$ {getTotal().toFixed(2)}
                   </span>
                 </div>
-                <div className="flex justify-between text-base text-black-medium">
+                <div className="flex justify-between text-base text-ink-muted">
                   <span>Itens no carrinho:</span>
                   <span>{cart.length} produto(s)</span>
                 </div>
               </div>
 
               {/* Botão Finalizar */}
-              <button
-                onClick={openPaymentModal}
-                className="w-full bg-success hover:bg-green-700 text-white py-4 px-6 rounded-lg font-nunito font-bold text-xl transition-colors shadow-lg"
-              >
-                💳 Finalizar Venda
-              </button>
+              <Button variant="success" size="lg" fullWidth onClick={openPaymentModal}>
+                <CreditCard className="h-5 w-5" aria-hidden="true" />
+                Finalizar Venda
+              </Button>
             </div>
           )}
         </div>
       </div>
 
-      {/* ✅ Modal de Pagamento */}
+      {/* Modal de Pagamento */}
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
@@ -445,7 +445,7 @@ export const PDV: React.FC = () => {
         total={getTotal()}
       />
 
-      {/* ✅ Modal de Nota Fiscal */}
+      {/* Modal de Nota Fiscal */}
       <InvoiceModal
         isOpen={showInvoiceModal}
         onClose={() => setShowInvoiceModal(false)}

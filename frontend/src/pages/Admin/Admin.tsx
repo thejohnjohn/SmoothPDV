@@ -1,24 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { BarChart3, Briefcase, Building2, ClipboardList, Plus, RefreshCw, User } from 'lucide-react';
 import { ListaLojas } from '../../components/features/admin/ListaLojas/ListaLojas';
 import { GerentesList } from '../../components/features/admin/GerentesList/GerentesList';
 import { VendedoresList } from '../../components/features/admin/VendedoresList/VendedoresList';
 import { LojaForm } from '../../components/features/admin/LojaForm/LojaForm';
 import { GerenteForm } from '../../components/features/admin/GerenteForm/GerenteForm';
 import { VendedorForm } from '../../components/features/admin/VendedorForm/VendedorForm';
-import type { Loja, Gerente, Vendedor, VendedorCreateData } from '../../types/admin';
+import { Button } from '../../components/ui/Button/Button';
+import { Card } from '../../components/ui/Card/Card';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog/ConfirmDialog';
+import { LoadingState } from '../../components/ui/LoadingState/LoadingState';
+import { PageHeader } from '../../components/ui/PageHeader/PageHeader';
+import { useToast } from '../../components/ui/Toast/useToast';
+import type { Loja, Gerente, Vendedor, VendedorCreateData, GerenteCreateData } from '../../types/admin';
 import { adminService } from '../../services/adminService';
 
 type ActiveTab = 'lojas' | 'gerentes' | 'vendedores';
 type ActiveForm = 'loja' | 'gerente' | 'vendedor' | null;
 
+const deleteMessages: Record<ActiveTab, string> = {
+  lojas: 'Tem certeza que deseja deletar esta loja?',
+  gerentes: 'Tem certeza que deseja deletar este gerente?',
+  vendedores: 'Tem certeza que deseja deletar este vendedor?',
+};
+
+const deleteTitles: Record<ActiveTab, string> = {
+  lojas: 'Excluir loja',
+  gerentes: 'Excluir gerente',
+  vendedores: 'Excluir vendedor',
+};
+
 export const Admin: React.FC = () => {
-  const { user } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<ActiveTab>('lojas');
   const [activeForm, setActiveForm] = useState<ActiveForm>(null);
   const [selectedItem, setSelectedItem] = useState<Loja | Gerente | Vendedor | null>(null);
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<{ tab: ActiveTab; id: number } | null>(null);
 
   // Estados para os dados - agora carregados da API
   const [lojas, setLojas] = useState<Loja[]>([]);
@@ -85,26 +104,18 @@ export const Admin: React.FC = () => {
       setSelectedItem(null);
     } catch (error) {
       console.error('Erro ao salvar loja:', error);
-      alert('Erro ao salvar loja. Tente novamente.');
+      showToast('Erro ao salvar loja. Tente novamente.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeletarLoja = async (id: number) => {
-    if (window.confirm('Tem certeza que deseja deletar esta loja?')) {
-      try {
-        await adminService.deleteLoja(id);
-        setLojas(prev => prev.filter(l => l.id !== id));
-      } catch (error) {
-        console.error('Erro ao deletar loja:', error);
-        alert('Erro ao deletar loja. Tente novamente.');
-      }
-    }
+  const handleDeletarLoja = (id: number) => {
+    setDeleteTarget({ tab: 'lojas', id });
   };
 
   // Handlers para Gerentes
-  const handleSalvarGerente = async (data: Omit<Gerente, 'id' | 'criado_em'>) => {
+  const handleSalvarGerente = async (data: GerenteCreateData) => {
     setLoading(true);
     try {
       if (selectedItem) {
@@ -118,22 +129,14 @@ export const Admin: React.FC = () => {
       setSelectedItem(null);
     } catch (error) {
       console.error('Erro ao salvar gerente:', error);
-      alert('Erro ao salvar gerente. Tente novamente.');
+      showToast('Erro ao salvar gerente. Tente novamente.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeletarGerente = async (id: number) => {
-    if (window.confirm('Tem certeza que deseja deletar este gerente?')) {
-      try {
-        await adminService.deleteGerente(id);
-        setGerentes(prev => prev.filter(g => g.id !== id));
-      } catch (error) {
-        console.error('Erro ao deletar gerente:', error);
-        alert('Erro ao deletar gerente. Tente novamente.');
-      }
-    }
+  const handleDeletarGerente = (id: number) => {
+    setDeleteTarget({ tab: 'gerentes', id });
   };
 
   // Handlers para Vendedores
@@ -175,38 +178,63 @@ const handleSalvarVendedor = async (data: VendedorCreateData) => {
     setSelectedItem(null);
   } catch (error) {
     console.error('Erro ao salvar vendedor:', error);
-    alert('Erro ao salvar vendedor. Tente novamente.');
+    showToast('Erro ao salvar vendedor. Tente novamente.', 'error');
   } finally {
     setLoading(false);
   }
 };
 
-  const handleDeletarVendedor = async (id: number) => {
-    if (window.confirm('Tem certeza que deseja deletar este vendedor?')) {
+  const handleDeletarVendedor = (id: number) => {
+    setDeleteTarget({ tab: 'vendedores', id });
+  };
+
+  const handleConfirmarExclusao = async () => {
+    if (!deleteTarget) return;
+    const { tab, id } = deleteTarget;
+    setDeleteTarget(null);
+
+    if (tab === 'lojas') {
       try {
-        await adminService.deleteVendedor(id);
-        setVendedores(prev => prev.filter(v => v.id !== id));
+        await adminService.deleteLoja(id);
+        setLojas(prev => prev.filter(l => l.id !== id));
       } catch (error) {
-        console.error('Erro ao deletar vendedor:', error);
-        alert('Erro ao deletar vendedor. Tente novamente.');
+        console.error('Erro ao deletar loja:', error);
+        showToast('Erro ao deletar loja. Tente novamente.', 'error');
       }
+      return;
+    }
+
+    if (tab === 'gerentes') {
+      try {
+        await adminService.deleteGerente(id);
+        setGerentes(prev => prev.filter(g => g.id !== id));
+      } catch (error) {
+        console.error('Erro ao deletar gerente:', error);
+        showToast('Erro ao deletar gerente. Tente novamente.', 'error');
+      }
+      return;
+    }
+
+    try {
+      await adminService.deleteVendedor(id);
+      setVendedores(prev => prev.filter(v => v.id !== id));
+    } catch (error) {
+      console.error('Erro ao deletar vendedor:', error);
+      showToast('Erro ao deletar vendedor. Tente novamente.', 'error');
     }
   };
 
   const tabs = [
-    { id: 'lojas' as ActiveTab, label: 'Lojas', icon: '🏢' },
-    { id: 'gerentes' as ActiveTab, label: 'Gerentes', icon: '👔' },
-    { id: 'vendedores' as ActiveTab, label: 'Vendedores', icon: '👤' },
+    { id: 'lojas' as ActiveTab, label: 'Lojas', icon: Building2 },
+    { id: 'gerentes' as ActiveTab, label: 'Gerentes', icon: Briefcase },
+    { id: 'vendedores' as ActiveTab, label: 'Vendedores', icon: User },
   ];
 
   // Estado de loading geral
   if (dataLoading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-96">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-black-medium">Carregando dados...</p>
-        </div>
+      <div className="flex min-h-96 items-center justify-center p-6">
+        <LoadingState label="Carregando dados..." />
       </div>
     );
   }
@@ -214,82 +242,85 @@ const handleSalvarVendedor = async (data: VendedorCreateData) => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-black">🏢 Painel Administrativo</h1>
-          <p className="text-black-medium mt-1">
-            Gerencie lojas, gerentes e vendedores do sistema
-          </p>
-        </div>
-        
-        <div className="flex gap-3">
-          <button
-            onClick={carregarDados}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-bold transition-all duration-200"
-            disabled={dataLoading}
-          >
-            🔄 Atualizar
-          </button>
-          
-          {!activeForm && (
-            <button
-              onClick={() => handleAdicionar(activeTab === 'lojas' ? 'loja' : activeTab === 'gerentes' ? 'gerente' : 'vendedor')}
-              className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-bold transition-all duration-200 shadow-lg hover:shadow-xl"
+      <PageHeader
+        title="Painel Administrativo"
+        subtitle="Gerencie lojas, gerentes e vendedores do sistema"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={carregarDados}
+              disabled={dataLoading}
             >
-              + Adicionar {activeTab === 'lojas' ? 'Loja' : activeTab === 'gerentes' ? 'Gerente' : 'Vendedor'}
-            </button>
-          )}
-        </div>
-      </div>
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              Atualizar
+            </Button>
+            
+            {!activeForm && (
+              <Button
+                size="lg"
+                onClick={() => handleAdicionar(activeTab === 'lojas' ? 'loja' : activeTab === 'gerentes' ? 'gerente' : 'vendedor')}
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Adicionar {activeTab === 'lojas' ? 'Loja' : activeTab === 'gerentes' ? 'Gerente' : 'Vendedor'}
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl border border-black-light p-1">
+      <Card padding="none" className="p-1">
         <div className="flex space-x-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-3 px-4 rounded-lg text-center font-medium transition-all duration-200 ${
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-center font-medium transition-all duration-200 ${
                 activeTab === tab.id
-                  ? 'bg-primary text-white shadow-md'
-                  : 'text-black-medium hover:bg-primary-light hover:text-black'
+                  ? 'bg-primary-600 text-white shadow-sm'
+                  : 'text-ink-muted hover:bg-primary-100 hover:text-ink'
               }`}
             >
-              <span className="text-lg mr-2">{tab.icon}</span>
+              <tab.icon className="h-4 w-4" aria-hidden="true" />
               {tab.label}
             </button>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* Conteúdo Principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Estatísticas (visível apenas quando não há formulário) */}
         {!activeForm && (
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white rounded-xl border border-black-light p-6">
-              <h3 className="text-lg font-bold text-black mb-4">📊 Resumo</h3>
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
+                <BarChart3 className="h-5 w-5" aria-hidden="true" />
+                Resumo
+              </h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                  <span className="text-black-medium">Total Lojas</span>
-                  <span className="font-bold text-blue-600">{lojas.length}</span>
+                <div className="flex justify-between items-center p-3 bg-secondary-50 rounded-lg">
+                  <span className="text-ink-muted">Total Lojas</span>
+                  <span className="font-bold text-secondary-700">{lojas.length}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                  <span className="text-black-medium">Total Gerentes</span>
-                  <span className="font-bold text-green-600">{gerentes.length}</span>
+                <div className="flex justify-between items-center p-3 bg-success-50 rounded-lg">
+                  <span className="text-ink-muted">Total Gerentes</span>
+                  <span className="font-bold text-success-700">{gerentes.length}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                  <span className="text-black-medium">Total Vendedores</span>
-                  <span className="font-bold text-purple-600">{vendedores.length}</span>
+                <div className="flex justify-between items-center p-3 bg-primary-50 rounded-lg">
+                  <span className="text-ink-muted">Total Vendedores</span>
+                  <span className="font-bold text-primary-700">{vendedores.length}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
-                  <span className="text-black-medium">Lojas Ativas</span>
-                  <span className="font-bold text-orange-600">
+                <div className="flex justify-between items-center p-3 bg-warning-50 rounded-lg">
+                  <span className="text-ink-muted">Lojas Ativas</span>
+                  <span className="font-bold text-warning-600">
                     {lojas.filter(l => l.status === 'ativo').length}
                   </span>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         )}
         {/* Lista/Formulário */}
@@ -318,10 +349,13 @@ const handleSalvarVendedor = async (data: VendedorCreateData) => {
               loading={loading}
             />
           ) : (
-            <div className="bg-white rounded-xl border border-black-light p-6">
+            <Card>
               {activeTab === 'lojas' && (
                 <>
-                  <h2 className="text-xl font-bold text-black mb-4">📋 Lojas Cadastradas</h2>
+                  <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-ink">
+                    <ClipboardList className="h-5 w-5" aria-hidden="true" />
+                    Lojas Cadastradas
+                  </h2>
                   <ListaLojas
                     lojas={lojas} // Propriedade lojas dando erro
                     onSelecionarLoja={(loja) => handleEditar(loja, 'loja')}
@@ -336,7 +370,10 @@ const handleSalvarVendedor = async (data: VendedorCreateData) => {
 
               {activeTab === 'gerentes' && (
                 <>
-                  <h2 className="text-xl font-bold text-black mb-4">👔 Gerentes Cadastrados</h2>
+                  <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-ink">
+                    <Briefcase className="h-5 w-5" aria-hidden="true" />
+                    Gerentes Cadastrados
+                  </h2>
                   <GerentesList
                     gerentes={gerentes}
                     onSelecionarGerente={(gerente) => handleEditar(gerente, 'gerente')}
@@ -351,7 +388,10 @@ const handleSalvarVendedor = async (data: VendedorCreateData) => {
 
               {activeTab === 'vendedores' && (
                 <>
-                  <h2 className="text-xl font-bold text-black mb-4">👤 Vendedores Cadastrados</h2>
+                  <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-ink">
+                    <User className="h-5 w-5" aria-hidden="true" />
+                    Vendedores Cadastrados
+                  </h2>
                   <VendedoresList
                     vendedores={vendedores}
                     onSelecionarVendedor={(vendedor) => handleEditar(vendedor, 'vendedor')}
@@ -363,10 +403,19 @@ const handleSalvarVendedor = async (data: VendedorCreateData) => {
                   />
                 </>
               )}
-            </div>
+            </Card>
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={deleteTarget ? deleteTitles[deleteTarget.tab] : ''}
+        message={deleteTarget ? deleteMessages[deleteTarget.tab] : ''}
+        confirmLabel="Excluir"
+        onConfirm={handleConfirmarExclusao}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };

@@ -1,13 +1,27 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Banknote, BarChart3, CheckCircle2, Package, Store, Users, Zap } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useProdutosGerente } from '../../hooks/useProdutosGerente';
 import { useVendedoresGerente } from '../../hooks/useVendedoresGerente';
 import { ProductsListGerente } from '../../components/features/gerente/ProductsListGerente/ProductsListGerente';
 import { VendedoresListGerente } from '../../components/features/gerente/VendedoresListGerente/VendedoresListGerente';
+import { Button } from '../../components/ui/Button/Button';
+import { Card } from '../../components/ui/Card/Card';
+import { PageHeader } from '../../components/ui/PageHeader/PageHeader';
+import { StatCard } from '../../components/ui/StatCard/StatCard';
 
 type ActiveTab = 'dashboard' | 'produtos' | 'vendedores' | 'vendas';
 
+interface GerenteStats {
+  totalProdutos: number;
+  totalVendedores: number;
+  vendedoresAtivos: number;
+  produtosCadastrados: number;
+}
+
 export const Gerente: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   
@@ -21,13 +35,13 @@ export const Gerente: React.FC = () => {
       loadProdutos();
       loadVendedores();
     }
-  }, [user]);
+  }, [user, loadProdutos, loadVendedores]);
 
   // Verificar se o usuário é gerente
   if (user?.tipo !== 'GERENTE') {
     return (
       <div className="p-6">
-        <div className="bg-error text-white p-4 rounded-lg text-center">
+        <div className="bg-error-600 text-white p-4 rounded-lg text-center">
           <p className="text-lg font-bold">Acesso Restrito</p>
           <p>Esta página é exclusiva para gerentes.</p>
         </div>
@@ -36,10 +50,10 @@ export const Gerente: React.FC = () => {
   }
 
   const tabs = [
-    { id: 'dashboard' as ActiveTab, label: '📊 Dashboard', icon: '📊' },
-    { id: 'produtos' as ActiveTab, label: '📦 Produtos', icon: '📦' },
-    { id: 'vendedores' as ActiveTab, label: '👥 Vendedores', icon: '👥' },
-    { id: 'vendas' as ActiveTab, label: '💰 Vendas', icon: '💰' },
+    { id: 'dashboard' as ActiveTab, label: 'Dashboard', icon: BarChart3 },
+    { id: 'produtos' as ActiveTab, label: 'Produtos', icon: Package },
+    { id: 'vendedores' as ActiveTab, label: 'Vendedores', icon: Users },
+    { id: 'vendas' as ActiveTab, label: 'Vendas', icon: Banknote },
   ];
 
   const stats = {
@@ -57,27 +71,30 @@ export const Gerente: React.FC = () => {
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-black">📦 Gerenciar Produtos</h2>
-              <button
-                onClick={() => window.location.href = '/gerente/produtos'}
-                className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-bold transition-all duration-200"
+              <h2 className="flex items-center gap-2 text-2xl font-bold text-ink">
+                <Package className="h-6 w-6" aria-hidden="true" />
+                Gerenciar Produtos
+              </h2>
+              <Button
+                size="lg"
+                onClick={() => navigate('/gerente/produtos')}
               >
                 Gerenciar Produtos
-              </button>
+              </Button>
             </div>
             <ProductsListGerente
               products={products.slice(0, 6)} // Mostrar apenas 6 produtos no preview
-              onSelecionarProduto={(product) => window.location.href = '/gerente/produtos'}
+              onSelecionarProduto={() => navigate('/gerente/produtos')}
               onDeletarProduto={() => {}}
             />
             {products.length > 6 && (
               <div className="text-center">
-                <button
-                  onClick={() => window.location.href = '/gerente/produtos'}
-                  className="text-primary hover:text-primary-hover font-medium"
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/gerente/produtos')}
                 >
                   Ver todos os {products.length} produtos →
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -86,28 +103,31 @@ export const Gerente: React.FC = () => {
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-black">👥 Gerenciar Vendedores</h2>
-              <button
-                onClick={() => window.location.href = '/gerente/vendedores'}
-                className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-bold transition-all duration-200"
+              <h2 className="flex items-center gap-2 text-2xl font-bold text-ink">
+                <Users className="h-6 w-6" aria-hidden="true" />
+                Gerenciar Vendedores
+              </h2>
+              <Button
+                size="lg"
+                onClick={() => navigate('/gerente/vendedores')}
               >
                 Gerenciar Vendedores
-              </button>
+              </Button>
             </div>
             <VendedoresListGerente
               vendedores={vendedores.slice(0, 6)} // Mostrar apenas 6 vendedores no preview
-              onSelecionarVendedor={(vendedor) => window.location.href = '/gerente/vendedores'}
+              onSelecionarVendedor={() => navigate('/gerente/vendedores')}
               onDeletarVendedor={() => {}}
               onAtualizarStatus={() => {}}
             />
             {vendedores.length > 6 && (
               <div className="text-center">
-                <button
-                  onClick={() => window.location.href = '/gerente/vendedores'}
-                  className="text-primary hover:text-primary-hover font-medium"
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/gerente/vendedores')}
                 >
                   Ver todos os {vendedores.length} vendedores →
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -115,17 +135,18 @@ export const Gerente: React.FC = () => {
       case 'vendas':
         return (
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">💰</div>
-            <h2 className="text-2xl font-bold text-black mb-4">Relatório de Vendas</h2>
-            <p className="text-black-medium mb-6">
+            <Banknote className="mx-auto mb-4 h-16 w-16 text-primary-700" aria-hidden="true" />
+            <h2 className="text-2xl font-bold text-ink mb-4">Relatório de Vendas</h2>
+            <p className="text-ink-muted mb-6">
               Acesse o dashboard completo para ver relatórios detalhados de vendas
             </p>
-            <button
-              onClick={() => window.location.href = '/dashboard'}
-              className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-bold transition-all duration-200"
+            <Button
+              size="lg"
+              onClick={() => navigate('/dashboard')}
             >
-              📊 Ir para Dashboard
-            </button>
+              <BarChart3 className="h-4 w-4" aria-hidden="true" />
+              Ir para Dashboard
+            </Button>
           </div>
         );
       default:
@@ -136,129 +157,149 @@ export const Gerente: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-black">👔 Painel do Gerente</h1>
-          <p className="text-black-medium mt-1">
-            Gerencie sua loja, produtos, equipe e vendas
-          </p>
-        </div>
-        
-        <div className="flex gap-3">
-          <button
-            onClick={() => window.location.href = '/dashboard'}
-            className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-bold transition-all duration-200"
+      <PageHeader
+        title="Painel do Gerente"
+        subtitle="Gerencie sua loja, produtos, equipe e vendas"
+        actions={
+          <Button
+            size="lg"
+            onClick={() => navigate('/dashboard')}
           >
-            📊 Dashboard Completo
-          </button>
-        </div>
-      </div>
+            <BarChart3 className="h-4 w-4" aria-hidden="true" />
+            Dashboard Completo
+          </Button>
+        }
+      />
 
       {/* Métricas Rápidas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl border border-black-light p-6 text-center">
-          <div className="text-3xl mb-2">📦</div>
-          <h3 className="font-bold text-black">Produtos</h3>
-          <p className="text-2xl font-bold text-primary">{stats.totalProdutos}</p>
-        </div>
+        <StatCard
+          label="Produtos"
+          value={stats.totalProdutos}
+          tone="primary"
+          icon={<Package className="h-5 w-5" aria-hidden="true" />}
+        />
         
-        <div className="bg-white rounded-xl border border-black-light p-6 text-center">
-          <div className="text-3xl mb-2">👥</div>
-          <h3 className="font-bold text-black">Vendedores</h3>
-          <p className="text-2xl font-bold text-success">{stats.totalVendedores}</p>
-        </div>
+        <StatCard
+          label="Vendedores"
+          value={stats.totalVendedores}
+          tone="success"
+          icon={<Users className="h-5 w-5" aria-hidden="true" />}
+        />
         
-        <div className="bg-white rounded-xl border border-black-light p-6 text-center">
-          <div className="text-3xl mb-2">✅</div>
-          <h3 className="font-bold text-black">Ativos</h3>
-          <p className="text-2xl font-bold text-green-600">{stats.vendedoresAtivos}</p>
-        </div>
+        <StatCard
+          label="Ativos"
+          value={stats.vendedoresAtivos}
+          tone="success"
+          icon={<CheckCircle2 className="h-5 w-5" aria-hidden="true" />}
+        />
         
-        <div className="bg-white rounded-xl border border-black-light p-6 text-center">
-          <div className="text-3xl mb-2">💰</div>
-          <h3 className="font-bold text-black">Vendas Hoje</h3>
-          <p className="text-2xl font-bold text-purple-600">-</p>
-        </div>
+        <StatCard
+          label="Vendas Hoje"
+          value="-"
+          tone="primary"
+          icon={<Banknote className="h-5 w-5" aria-hidden="true" />}
+        />
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl border border-black-light p-1">
+      <Card padding="none" className="p-1">
         <div className="flex space-x-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-3 px-4 rounded-lg text-center font-medium transition-all duration-200 ${
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-center font-medium transition-all duration-200 ${
                 activeTab === tab.id
-                  ? 'bg-primary text-white shadow-md'
-                  : 'text-black-medium hover:bg-primary-light hover:text-black'
+                  ? 'bg-primary-600 text-white shadow-sm'
+                  : 'text-ink-muted hover:bg-primary-100 hover:text-ink'
               }`}
             >
-              <span className="text-lg mr-2">{tab.icon}</span>
+              <tab.icon className="h-4 w-4" aria-hidden="true" />
               {tab.label}
             </button>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* Conteúdo da Tab */}
-      <div className="bg-white rounded-xl border border-black-light p-6">
+      <Card>
         {renderTabContent()}
-      </div>
+      </Card>
     </div>
   );
 };
 
 // Componente de Dashboard para Gerente
-const DashboardGerente: React.FC<{ stats: any }> = ({ stats }) => {
+const DashboardGerente: React.FC<{ stats: GerenteStats }> = ({ stats }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-black">📊 Visão Geral da Loja</h2>
+      <h2 className="flex items-center gap-2 text-2xl font-bold text-ink">
+        <BarChart3 className="h-6 w-6" aria-hidden="true" />
+        Visão Geral da Loja
+      </h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Resumo da Loja */}
-        <div className="bg-blue-50 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-blue-800 mb-4">🏪 Resumo da Loja</h3>
+        <Card>
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-secondary-700">
+            <Store className="h-5 w-5" aria-hidden="true" />
+            Resumo da Loja
+          </h3>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-blue-700">Produtos Cadastrados:</span>
-              <span className="font-bold text-blue-800">{stats.totalProdutos}</span>
+              <span className="text-ink-muted">Produtos Cadastrados:</span>
+              <span className="font-bold text-secondary-700">{stats.totalProdutos}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-blue-700">Vendedores na Equipe:</span>
-              <span className="font-bold text-blue-800">{stats.totalVendedores}</span>
+              <span className="text-ink-muted">Vendedores na Equipe:</span>
+              <span className="font-bold text-secondary-700">{stats.totalVendedores}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-blue-700">Vendedores Ativos:</span>
-              <span className="font-bold text-green-600">{stats.vendedoresAtivos}</span>
+              <span className="text-ink-muted">Vendedores Ativos:</span>
+              <span className="font-bold text-success-600">{stats.vendedoresAtivos}</span>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Ações Rápidas */}
-        <div className="bg-green-50 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-green-800 mb-4">⚡ Ações Rápidas</h3>
+        <Card>
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
+            <Zap className="h-5 w-5" aria-hidden="true" />
+            Ações Rápidas
+          </h3>
           <div className="space-y-3">
-            <button
-              onClick={() => window.location.href = '/gerente/produtos'}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold transition-colors text-center"
+            <Button
+              variant="success"
+              size="lg"
+              fullWidth
+              onClick={() => navigate('/gerente/produtos')}
             >
-              📦 Gerenciar Produtos
-            </button>
-            <button
-              onClick={() => window.location.href = '/gerente/vendedores'}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold transition-colors text-center"
+              <Package className="h-4 w-4" aria-hidden="true" />
+              Gerenciar Produtos
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
+              fullWidth
+              onClick={() => navigate('/gerente/vendedores')}
             >
-              👥 Gerenciar Vendedores
-            </button>
-            <button
-              onClick={() => window.location.href = '/dashboard'}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-bold transition-colors text-center"
+              <Users className="h-4 w-4" aria-hidden="true" />
+              Gerenciar Vendedores
+            </Button>
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              onClick={() => navigate('/dashboard')}
             >
-              📊 Ver Dashboard Completo
-            </button>
+              <BarChart3 className="h-4 w-4" aria-hidden="true" />
+              Ver Dashboard Completo
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );
